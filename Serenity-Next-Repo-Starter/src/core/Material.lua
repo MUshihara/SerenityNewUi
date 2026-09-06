@@ -2,15 +2,17 @@ local Material = {}
 
 local SHADOW_IMAGE = "rbxassetid://1316045217"
 
-local function corner(parent, radius)
+local function corner(parent, radius, name)
     local c = Instance.new("UICorner")
+    c.Name = name or "Corner"
     c.CornerRadius = UDim.new(0, radius)
     c.Parent = parent
     return c
 end
 
-local function stroke(parent, color, transparency, thickness)
+local function stroke(parent, color, transparency, thickness, name)
     local s = Instance.new("UIStroke")
+    s.Name = name or "Stroke"
     s.Color = color
     s.Transparency = transparency
     s.Thickness = thickness or 1
@@ -24,10 +26,10 @@ function Material.Shadow(parent, targetSize, radius, tokens)
     shadow.Name = "SoftShadow"
     shadow.AnchorPoint = Vector2.new(0.5, 0.5)
     shadow.Position = UDim2.fromScale(0.5, 0.5)
-    shadow.Size = UDim2.new(targetSize.X.Scale, targetSize.X.Offset + 42, targetSize.Y.Scale, targetSize.Y.Offset + 42)
+    shadow.Size = UDim2.new(targetSize.X.Scale, targetSize.X.Offset + 54, targetSize.Y.Scale, targetSize.Y.Offset + 54)
     shadow.BackgroundTransparency = 1
     shadow.Image = SHADOW_IMAGE
-    shadow.ImageColor3 = Color3.new(0, 0, 0)
+    shadow.ImageColor3 = Color3.fromRGB(5, 6, 12)
     shadow.ImageTransparency = tokens.Material.ShadowTransparency
     shadow.ScaleType = Enum.ScaleType.Slice
     shadow.SliceCenter = Rect.new(10, 10, 118, 118)
@@ -40,50 +42,28 @@ function Material.Shell(frame, tokens)
     frame.BackgroundColor3 = tokens.Color.Shell
     frame.BackgroundTransparency = tokens.Material.ShellTransparency
     frame.BorderSizePixel = 0
-    corner(frame, tokens.Size.RadiusShell)
-
-    local edge = stroke(frame, tokens.Color.StrokeBright, tokens.Material.EdgeTransparency, 1)
-    edge.Name = "GlassEdge"
+    corner(frame, tokens.Size.RadiusShell, "ShellCorner")
+    stroke(frame, tokens.Color.Stroke, tokens.Material.EdgeTransparency, 1, "ShellEdge")
 
     local gradient = Instance.new("UIGradient")
-    gradient.Rotation = 122
+    gradient.Name = "ShellTone"
+    gradient.Rotation = 118
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 29, 43)),
-        ColorSequenceKeypoint.new(0.38, Color3.fromRGB(9, 14, 22)),
-        ColorSequenceKeypoint.new(0.72, Color3.fromRGB(11, 16, 25)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 17, 31)),
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(9, 11, 23)),
+        ColorSequenceKeypoint.new(0.45, Color3.fromRGB(4, 5, 14)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 18)),
     })
     gradient.Parent = frame
 
-    local reflection = Instance.new("Frame")
-    reflection.Name = "TopReflection"
-    reflection.BackgroundColor3 = Color3.fromRGB(218, 238, 255)
-    reflection.BackgroundTransparency = tokens.Material.HighlightTransparency
-    reflection.BorderSizePixel = 0
-    reflection.Position = UDim2.fromOffset(16, 0)
-    reflection.Size = UDim2.new(1, -32, 0, 1)
-    reflection.ZIndex = frame.ZIndex + 1
-    reflection.Parent = frame
-
-    local accent = Instance.new("Frame")
-    accent.Name = "AccentReflection"
-    accent.AnchorPoint = Vector2.new(0.5, 1)
-    accent.Position = UDim2.new(0.5, 0, 1, 0)
-    accent.Size = UDim2.new(0.54, 0, 0, 1)
-    accent.BackgroundColor3 = tokens.Color.Lavender
-    accent.BackgroundTransparency = 0.90
-    accent.BorderSizePixel = 0
-    accent.ZIndex = frame.ZIndex + 1
-    accent.Parent = frame
-
-    local fade = Instance.new("UIGradient")
-    fade.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 1),
-        NumberSequenceKeypoint.new(0.5, 0),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    fade.Parent = accent
-
+    local topLine = Instance.new("Frame")
+    topLine.Name = "TopGlassLine"
+    topLine.BackgroundColor3 = Color3.fromRGB(186, 204, 238)
+    topLine.BackgroundTransparency = 0.93
+    topLine.BorderSizePixel = 0
+    topLine.Position = UDim2.fromOffset(14, 0)
+    topLine.Size = UDim2.new(1, -28, 0, 1)
+    topLine.ZIndex = frame.ZIndex + 1
+    topLine.Parent = frame
     return frame
 end
 
@@ -91,35 +71,61 @@ function Material.Sidebar(frame, tokens)
     frame.BackgroundColor3 = tokens.Color.Sidebar
     frame.BackgroundTransparency = tokens.Material.SidebarTransparency
     frame.BorderSizePixel = 0
-    corner(frame, tokens.Size.RadiusSection)
-    stroke(frame, tokens.Color.Stroke, 0.90, 1)
+
+    local divider = Instance.new("Frame")
+    divider.Name = "SidebarDivider"
+    divider.AnchorPoint = Vector2.new(1, 0)
+    divider.Position = UDim2.new(1, 0, 0, 14)
+    divider.Size = UDim2.new(0, 1, 1, -28)
+    divider.BackgroundColor3 = tokens.Color.Divider
+    divider.BackgroundTransparency = 0.34
+    divider.BorderSizePixel = 0
+    divider.Parent = frame
+    return frame
+end
+
+function Material.Topbar(frame, tokens)
+    frame.BackgroundColor3 = tokens.Color.Topbar
+    frame.BackgroundTransparency = tokens.Material.TopbarTransparency
+    frame.BorderSizePixel = 0
+
+    local divider = Instance.new("Frame")
+    divider.AnchorPoint = Vector2.new(0, 1)
+    divider.Position = UDim2.new(0, 12, 1, 0)
+    divider.Size = UDim2.new(1, -24, 0, 1)
+    divider.BackgroundColor3 = tokens.Color.Divider
+    divider.BackgroundTransparency = 0.42
+    divider.BorderSizePixel = 0
+    divider.Parent = frame
     return frame
 end
 
 function Material.Section(frame, tokens)
-    frame.BackgroundColor3 = tokens.Color.Surface
-    frame.BackgroundTransparency = tokens.Material.SectionTransparency
+    frame.BackgroundColor3 = tokens.Color.Panel
+    frame.BackgroundTransparency = tokens.Material.PanelTransparency
     frame.BorderSizePixel = 0
-    corner(frame, tokens.Size.RadiusSection)
-    stroke(frame, tokens.Color.Stroke, 0.93, 1)
-
-    local top = Instance.new("Frame")
-    top.Name = "SectionHairline"
-    top.BackgroundColor3 = tokens.Color.StrokeBright
-    top.BackgroundTransparency = 0.94
-    top.BorderSizePixel = 0
-    top.Position = UDim2.fromOffset(10, 0)
-    top.Size = UDim2.new(1, -20, 0, 1)
-    top.Parent = frame
+    corner(frame, tokens.Size.RadiusPanel, "PanelCorner")
+    stroke(frame, tokens.Color.Stroke, 0.90, 1, "PanelStroke")
     return frame
 end
 
 function Material.Control(frame, tokens)
-    frame.BackgroundColor3 = tokens.Color.Control
-    frame.BackgroundTransparency = tokens.Material.ControlTransparency
+    frame.BackgroundColor3 = tokens.Color.PanelSoft
+    frame.BackgroundTransparency = 1
     frame.BorderSizePixel = 0
-    corner(frame, tokens.Size.RadiusControl)
-    stroke(frame, tokens.Color.Stroke, 0.94, 1)
+
+    local separator = frame:FindFirstChild("RowSeparator")
+    if not separator then
+        separator = Instance.new("Frame")
+        separator.Name = "RowSeparator"
+        separator.AnchorPoint = Vector2.new(0, 1)
+        separator.Position = UDim2.new(0, 12, 1, 0)
+        separator.Size = UDim2.new(1, -24, 0, 1)
+        separator.BackgroundColor3 = tokens.Color.Divider
+        separator.BackgroundTransparency = 0.62
+        separator.BorderSizePixel = 0
+        separator.Parent = frame
+    end
     return frame
 end
 
@@ -127,68 +133,73 @@ function Material.Popup(frame, tokens)
     frame.BackgroundColor3 = tokens.Color.Popup
     frame.BackgroundTransparency = tokens.Material.PopupTransparency
     frame.BorderSizePixel = 0
-    corner(frame, tokens.Size.RadiusPopup)
-    stroke(frame, tokens.Color.StrokeBright, 0.67, 1)
+    corner(frame, tokens.Size.RadiusPopup, "PopupCorner")
+    stroke(frame, tokens.Color.Stroke, 0.52, 1, "PopupStroke")
 
-    local glow = Instance.new("Frame")
-    glow.BackgroundColor3 = tokens.Color.Accent
-    glow.BackgroundTransparency = 0.91
-    glow.BorderSizePixel = 0
-    glow.Size = UDim2.new(0.42, 0, 0, 1)
-    glow.Position = UDim2.fromOffset(12, 0)
-    glow.Parent = frame
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "PopupShadow"
+    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+    shadow.Position = UDim2.fromScale(0.5, 0.5)
+    shadow.Size = UDim2.new(1, 28, 1, 28)
+    shadow.BackgroundTransparency = 1
+    shadow.Image = SHADOW_IMAGE
+    shadow.ImageColor3 = Color3.new(0, 0, 0)
+    shadow.ImageTransparency = 0.52
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+    shadow.ZIndex = frame.ZIndex - 1
+    shadow.Parent = frame
+    return frame
+end
+
+function Material.NavRow(frame, tokens, selected)
+    frame.BackgroundColor3 = selected and tokens.Color.NavActive or tokens.Color.NavHover
+    frame.BackgroundTransparency = selected and 0.04 or 1
+    frame.BorderSizePixel = 0
+
+    local c = frame:FindFirstChild("NavCorner")
+    if not c then
+        c = corner(frame, tokens.Size.RadiusNav, "NavCorner")
+    end
     return frame
 end
 
 function Material.NavTile(frame, tokens, color, selected)
-    frame.BackgroundColor3 = selected and (color or tokens.Color.Accent) or tokens.Color.SurfaceSoft
-    frame.BackgroundTransparency = selected and 0.03 or 0.34
+    -- Kept for compatibility. M3 uses the icon itself as the strongest accent.
+    frame.BackgroundColor3 = selected and tokens.Color.InsetHover or tokens.Color.Inset
+    frame.BackgroundTransparency = selected and 0.10 or 0.38
     frame.BorderSizePixel = 0
 
-    local tileCorner = frame:FindFirstChild("NavTileCorner")
-    if not tileCorner then
-        tileCorner = corner(frame, tokens.Size.RadiusTile)
-        tileCorner.Name = "NavTileCorner"
-    end
-
-    local s = frame:FindFirstChild("NavTileStroke") or stroke(frame, selected and (color or tokens.Color.Accent) or tokens.Color.Stroke, selected and 0.48 or 0.86, 1)
-    s.Name = "NavTileStroke"
+    local c = frame:FindFirstChild("NavTileCorner")
+    if not c then c = corner(frame, 6, "NavTileCorner") end
+    local s = frame:FindFirstChild("NavTileStroke")
+    if not s then s = stroke(frame, tokens.Color.Stroke, 0.90, 1, "NavTileStroke") end
     s.Color = selected and (color or tokens.Color.Accent) or tokens.Color.Stroke
-    s.Transparency = selected and 0.48 or 0.86
+    s.Transparency = selected and 0.78 or 0.93
+    return frame
+end
+
+function Material.Inset(frame, tokens)
+    frame.BackgroundColor3 = tokens.Color.Inset
+    frame.BackgroundTransparency = 0.04
+    frame.BorderSizePixel = 0
+    corner(frame, 6, "InsetCorner")
+    stroke(frame, tokens.Color.Stroke, 0.88, 1, "InsetStroke")
     return frame
 end
 
 function Material.Pill(frame, tokens, accent)
     frame.BackgroundColor3 = tokens.Color.Inset
-    frame.BackgroundTransparency = 0.06
+    frame.BackgroundTransparency = 0.04
     frame.BorderSizePixel = 0
-    corner(frame, 8)
-    stroke(frame, accent or tokens.Color.Stroke, accent and 0.70 or 0.84, 1)
-    return frame
-end
-
-function Material.Banner(frame, tokens, accent)
-    accent = accent or tokens.Color.Accent
-    frame.BackgroundColor3 = accent
-    frame.BackgroundTransparency = 0.88
-    frame.BorderSizePixel = 0
-    corner(frame, 10)
-    stroke(frame, accent, 0.70, 1)
-
-    local bar = Instance.new("Frame")
-    bar.Name = "AccentBar"
-    bar.BackgroundColor3 = accent
-    bar.BorderSizePixel = 0
-    bar.Position = UDim2.fromOffset(0, 9)
-    bar.Size = UDim2.fromOffset(3, 44)
-    bar.Parent = frame
-    corner(bar, 2)
+    corner(frame, 7, "PillCorner")
+    stroke(frame, accent or tokens.Color.Stroke, accent and 0.76 or 0.90, 1, "PillStroke")
     return frame
 end
 
 function Material.Hover(frame, tokens, active)
-    frame.BackgroundColor3 = active and tokens.Color.ControlHover or tokens.Color.Control
-    frame.BackgroundTransparency = active and 0.30 or tokens.Material.ControlTransparency
+    frame.BackgroundColor3 = active and tokens.Color.RowHover or tokens.Color.PanelSoft
+    frame.BackgroundTransparency = active and 0.28 or 1
 end
 
 return Material

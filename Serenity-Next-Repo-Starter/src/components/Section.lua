@@ -7,79 +7,73 @@ function Section.new(parent, deps, props)
 
     local frame = Instance.new("Frame")
     frame.Name = props.Id or "Section"
-    frame.Size = UDim2.new(1, 0, 0, tokens.Size.SectionHeader)
+    frame.BackgroundTransparency = 1
+    frame.Size = UDim2.new(1, 0, 0, 0)
     frame.AutomaticSize = Enum.AutomaticSize.Y
     frame.Parent = parent
-    deps.Material.Section(frame, tokens)
+
+    local stack = Instance.new("UIListLayout")
+    stack.Padding = UDim.new(0, 3)
+    stack.SortOrder = Enum.SortOrder.LayoutOrder
+    stack.Parent = frame
 
     local header = Instance.new("TextButton")
     header.BackgroundTransparency = 1
     header.Text = ""
     header.AutoButtonColor = false
-    header.Size = UDim2.new(1, 0, 0, tokens.Size.SectionHeader)
+    header.Size = UDim2.new(1, 0, 0, tokens.Size.SectionLabel)
+    header.LayoutOrder = 1
     header.Parent = frame
 
-    deps.Typography.Label(
+    local title = deps.Typography.Label(
         header,
         "Section",
         tokens,
-        props.Title or "Section",
-        UDim2.fromOffset(13, 6),
-        UDim2.new(1, -150, 0, 19),
-        tokens.Color.Text
+        string.upper(props.Title or "SECTION"),
+        UDim2.fromOffset(2, 0),
+        UDim2.new(1, -110, 1, 0),
+        tokens.Color.TextDim
     )
-
-    deps.Typography.Label(
-        header,
-        "Description",
-        tokens,
-        props.Description or "",
-        UDim2.fromOffset(13, 25),
-        UDim2.new(1, -150, 0, 16),
-        tokens.Color.TextMuted
-    )
+    title.TextTransparency = 0.16
 
     local status
     if props.Status then
-        status = Instance.new("TextLabel")
-        status.AnchorPoint = Vector2.new(1, 0.5)
-        status.Position = UDim2.new(1, -37, 0.5, 0)
-        status.Size = UDim2.fromOffset(74, 22)
-        status.BackgroundColor3 = tokens.Color.Inset
-        status.BackgroundTransparency = 0.18
-        status.BorderSizePixel = 0
-        status.Text = props.Status
-        status.TextColor3 = props.StatusColor or tokens.Color.TextMuted
-        status.Parent = header
-        deps.Typography.Apply(status, "Status", tokens, status.TextColor3)
-        local c = Instance.new("UICorner")
-        c.CornerRadius = UDim.new(0, 7)
-        c.Parent = status
-        local s = Instance.new("UIStroke")
-        s.Color = status.TextColor3
-        s.Transparency = 0.70
-        s.Parent = status
+        status = deps.Typography.Label(
+            header,
+            "Status",
+            tokens,
+            string.upper(props.Status),
+            UDim2.new(1, -104, 0, 0),
+            UDim2.fromOffset(80, tokens.Size.SectionLabel),
+            props.StatusColor or tokens.Color.TextDim
+        )
+        status.TextXAlignment = Enum.TextXAlignment.Right
     end
 
-    local caret = deps.Icons.Create(header, props.Open == false and "plus" or "minus", 14, tokens.Color.TextDim)
-    caret.AnchorPoint = Vector2.new(1, 0.5)
-    caret.Position = UDim2.new(1, -11, 0.5, 0)
+    local caret
+    if props.Collapsible then
+        caret = deps.Icons.Create(header, props.Open == false and "plus" or "minus", 12, tokens.Color.TextDim)
+        caret.AnchorPoint = Vector2.new(1, 0.5)
+        caret.Position = UDim2.new(1, -2, 0.5, 0)
+    end
 
     local body = Instance.new("Frame")
-    body.BackgroundTransparency = 1
-    body.Position = UDim2.fromOffset(7, tokens.Size.SectionHeader + 1)
-    body.Size = UDim2.new(1, -14, 0, 0)
+    body.Name = "Panel"
+    body.Size = UDim2.new(1, 0, 0, 0)
     body.AutomaticSize = Enum.AutomaticSize.Y
     body.Visible = props.Open ~= false
+    body.LayoutOrder = 2
     body.Parent = frame
+    deps.Material.Section(body, tokens)
 
     local list = Instance.new("UIListLayout")
-    list.Padding = UDim.new(0, tokens.Space.S)
+    list.Padding = UDim.new(0, 0)
     list.SortOrder = Enum.SortOrder.LayoutOrder
     list.Parent = body
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingBottom = UDim.new(0, 7)
+    pad.PaddingTop = UDim.new(0, 2)
+    pad.PaddingBottom = UDim.new(0, 2)
     pad.Parent = body
 
     local self = setmetatable({
@@ -89,11 +83,14 @@ function Section.new(parent, deps, props)
         Open = props.Open ~= false,
         Status = status,
         Caret = caret,
+        Collapsible = props.Collapsible == true,
         Deps = deps,
     }, Section)
 
     header.MouseButton1Click:Connect(function()
-        self:SetOpen(not self.Open)
+        if self.Collapsible then
+            self:SetOpen(not self.Open)
+        end
     end)
 
     return self
@@ -102,17 +99,15 @@ end
 function Section:SetOpen(value)
     self.Open = not not value
     self.Body.Visible = self.Open
-    self.Caret.Image = self.Deps.Icons.Get(self.Open and "minus" or "plus")
+    if self.Caret then
+        self.Caret.Image = self.Deps.Icons.Get(self.Open and "minus" or "plus")
+    end
 end
 
 function Section:SetStatus(text, color)
     if not self.Status then return end
-    self.Status.Text = text
-    if color then
-        self.Status.TextColor3 = color
-        local stroke = self.Status:FindFirstChildOfClass("UIStroke")
-        if stroke then stroke.Color = color end
-    end
+    self.Status.Text = string.upper(tostring(text))
+    if color then self.Status.TextColor3 = color end
 end
 
 return Section

@@ -4,51 +4,60 @@ Toggle.__index = Toggle
 function Toggle.new(parent, deps, props)
     local tokens = deps.Tokens
     props = props or {}
+    local hasDescription = props.Description and props.Description ~= ""
+    local height = hasDescription and tokens.Size.ControlWithDescription or tokens.Size.Control
 
     local row = Instance.new("CanvasGroup")
     row.Name = props.Id or "Toggle"
-    row.Size = UDim2.new(1, 0, 0, tokens.Size.Control)
+    row.Size = UDim2.new(1, 0, 0, height)
     row.Parent = parent
     deps.Material.Control(row, tokens)
 
+    local titleY = hasDescription and 6 or 0
+    local titleH = hasDescription and 19 or height
     deps.Typography.Label(
         row,
         "Control",
         tokens,
         props.Title or "Toggle",
-        UDim2.fromOffset(14, 7),
-        UDim2.new(1, -120, 0, 19),
+        UDim2.fromOffset(13, titleY),
+        UDim2.new(1, -108, 0, titleH),
         tokens.Color.Text
     )
 
-    deps.Typography.Label(
-        row,
-        "Description",
-        tokens,
-        props.Description or "",
-        UDim2.fromOffset(14, 28),
-        UDim2.new(1, -120, 0, 16),
-        tokens.Color.TextDim
-    )
+    if hasDescription then
+        deps.Typography.Label(
+            row,
+            "Description",
+            tokens,
+            props.Description,
+            UDim2.fromOffset(13, 27),
+            UDim2.new(1, -108, 0, 15),
+            tokens.Color.TextDim
+        )
+    end
+
+    if props.Settings then
+        local dots = deps.Typography.Label(row, "Value", tokens, "•••", UDim2.new(1, -96, 0, 0), UDim2.fromOffset(34, height), tokens.Color.TextDim)
+        dots.TextXAlignment = Enum.TextXAlignment.Center
+    end
 
     local switch = Instance.new("Frame")
     switch.AnchorPoint = Vector2.new(1, 0.5)
-    switch.Position = UDim2.new(1, -14, 0.5, 0)
-    switch.Size = UDim2.fromOffset(45, 25)
+    switch.Position = UDim2.new(1, -13, 0.5, 0)
+    switch.Size = UDim2.fromOffset(38, 21)
     switch.BorderSizePixel = 0
     switch.Parent = row
-
     local switchCorner = Instance.new("UICorner")
     switchCorner.CornerRadius = UDim.new(1, 0)
     switchCorner.Parent = switch
 
     local knob = Instance.new("Frame")
     knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Size = UDim2.fromOffset(17, 17)
-    knob.BackgroundColor3 = Color3.fromRGB(248, 251, 255)
+    knob.Size = UDim2.fromOffset(15, 15)
+    knob.BackgroundColor3 = Color3.fromRGB(249, 250, 255)
     knob.BorderSizePixel = 0
     knob.Parent = switch
-
     local knobCorner = Instance.new("UICorner")
     knobCorner.CornerRadius = UDim.new(1, 0)
     knobCorner.Parent = knob
@@ -73,13 +82,13 @@ function Toggle.new(parent, deps, props)
 
     function self:_render(animate)
         self.Switch.BackgroundColor3 = self.Value and self.Tokens.Color.Accent or self.Tokens.Color.Disabled
-        local pos = self.Value and UDim2.new(1, -12.5, 0.5, 0) or UDim2.fromOffset(12.5, 12.5)
+        local pos = self.Value and UDim2.new(1, -10.5, 0.5, 0) or UDim2.fromOffset(10.5, 10.5)
         if animate then
             self.Motion:Tween(self.Knob, "Toggle", {Position = pos})
         else
             self.Knob.Position = pos
         end
-        self.Frame.GroupTransparency = self.Enabled and 0 or 0.42
+        self.Frame.GroupTransparency = self.Enabled and 0 or 0.45
     end
 
     self:_render(false)
