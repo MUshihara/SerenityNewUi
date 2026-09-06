@@ -99,16 +99,18 @@ function Slider.new(parent, deps, props)
             self:_setFromX(input.Position.X)
         end
     end)
-    deps.UserInputService.InputChanged:Connect(function(input)
+
+    deps.Runtime:TrackConnection(deps.UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             self:_setFromX(input.Position.X)
         end
-    end)
-    deps.UserInputService.InputEnded:Connect(function(input)
+    end))
+
+    deps.Runtime:TrackConnection(deps.UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
         end
-    end)
+    end))
 
     self:_render()
     return self
