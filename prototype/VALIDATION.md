@@ -44,3 +44,9 @@ Syntax and mocked lifecycle suite pass, including delayed completion after popup
 Corrected section height conversion from scaled AbsoluteContentSize to logical offsets, and scaled search-scroll targeting. Added 22 px navigation icons, 44–48 px common rows, larger toggles, scrolling sub-tabs, responsive card stacking and compact phone navigation. Touch sliders restore page scrolling on release/cancellation. Low Effects removes popup CanvasGroups and motion, with no new frame loop.
 
 Mock checks pass for 390×760 portrait, 844×350 landscape and 360×640 portrait: shell bounds, scale 1, touch rows, card stacking, lightweight popup class, and complete cleanup. A controlled 90% scale measurement verifies section sizing. Prior callback, state and popup-interruption checks still pass. No on-device performance claim or rendered mobile screenshot is available.
+
+## Mobile stability follow-up
+
+Reviewed both new recordings and the production V14 mobile source (head-02 and part-02): its default geometry is 650×420 with a 50 px header and separate sidebar. Added an independent layouts/Mobile.lua geometry profile using that compact landscape approach, with a portrait variant and functional scale control. Existing production rendering code is unchanged. Navigation gets explicit order.
+
+Replaced the earlier scale-dependent section-height approach with the sum of explicit logical row heights. The earlier synthetic AbsoluteContentSize test did not establish real engine behavior; the new regression checks invariant logical height at 75, 90, 100 and 115 percent. Phone bounds and cleanup mocks pass. Actual phone stability and visual output remain unverified pending device testing.

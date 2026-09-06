@@ -25,7 +25,7 @@ return function(M,options)
     if options.LowEffects~=nil then ui.LowEffects=options.LowEffects==true end
     local app
     local ok,err=xpcall(function()
-        app=M.Renderer(ui,input,state,options)
+        app=M.Renderer(ui,input,state,options,M.MobileLayout)
         local popup=M.Popup(ui,input,app.Screen,function() return app.Scale.Scale end)
         app.Popup=popup; app.Runtime=runtime; app.Config=state; app.Controls={}; app.Sections={}; app.Tabs={}; app.SearchEntries={}
         local assets=M.Assets(runtime,options)

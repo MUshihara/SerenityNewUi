@@ -43,7 +43,7 @@ See `VALIDATION.md` for the exact checks performed and limits. No claim of live 
 
 ## Responsive preview revision
 
-Navigation icons are 22 px, with larger labels, section chevrons and switches. Touch devices use a compact labelled icon sidebar, unscaled controls, scrolling sub-tabs and stacked About cards in narrow windows. Desktop windows under 700 px also use the compact layout. Rotation and viewport resizing recompute the layout. Mobile uses automatic sizing instead of the desktop UI Scale setting.
+Navigation icons are 22 px, with larger labels, section chevrons and switches. Touch devices use a compact labelled icon sidebar, touch controls, scrolling sub-tabs and stacked About cards in narrow windows. Desktop windows under 700 px also use the compact layout. Rotation and viewport resizing recompute the layout. Mobile now has a dedicated layout profile: a 650×420 landscape shell with a labelled sidebar, and a narrower portrait shell. UI Scale works on both devices, capped to the available screen.
 
 Settings → Appearance → Low Effects disables motion, hover feedback and the shadow; popups use ordinary Frames instead of CanvasGroups. Enabled by default for touch devices when no preference was saved. Pictures remain available. Reduce Motion separately retains the visual styling.
 

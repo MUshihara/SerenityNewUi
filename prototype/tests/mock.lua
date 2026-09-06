@@ -157,19 +157,22 @@ _G.SerenityConceptOptions={LowEffects=true}
 local scaled=start()
 scaled.Config:Set('Settings.Appearance.Scale',90);scaled:Fit()
 local section=scaled.Sections['Settings.Appearance']
+local expected=49
 for _,child in ipairs(section.Body:GetChildren()) do
-    if child.ClassName=='UIListLayout' then child.TestContentSize=Vector2.new(0,180) end
+    if child.ClassName=='Frame' then expected=expected+child.Size.Y.Offset end
 end
-section:SetOpen(true,true)
-assert(math.abs(section.Frame.Size.Y.Offset-249)<0.01,'scaled section clips content')
+for _,percent in ipairs({75,90,100,115}) do
+    scaled.Config:Set('Settings.Appearance.Scale',percent);scaled:Fit();section:SetOpen(true,true)
+    assert(section.Frame.Size.Y.Offset==expected,'section height changed with UI scale')
+end
 scaled:Destroy()
 -- Phone layouts preserve control scale and stack cards; rotation recomputes the shell.
 input.TouchEnabled=true
 for _,size in ipairs({Vector2.new(390,760),Vector2.new(844,350),Vector2.new(360,640)}) do
     viewport=size
     local mobile=start()
-    assert(mobile.Scale.Scale==1 and mobile.SidebarWidth==68,'phone controls were shrunk')
-    assert(mobile.LayoutWidth<=size.X-24 and mobile.LayoutHeight<=size.Y-24,'phone shell overflow')
+    assert(mobile.Mobile and mobile.SidebarWidth==(size.Y>size.X and 68 or 144),'incorrect mobile profile')
+    assert(mobile.LayoutWidth*mobile.Scale.Scale<=size.X-24 and mobile.LayoutHeight*mobile.Scale.Scale<=size.Y-24,'phone shell overflow')
     assert(mobile.Pages.About.Icon.Size.X.Offset==22,'small navigation icons')
     assert(mobile.Controls['Automation.Farming.AutoCollect'].Frame.Size.Y.Offset>=48,'small touch row')
     if size.X<500 then assert(mobile.AboutCards.Updates.Position.Y.Offset==292,'cards failed to stack') end

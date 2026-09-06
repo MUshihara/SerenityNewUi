@@ -1,4 +1,4 @@
-return function(ui,input,state,options)
+return function(ui,input,state,options,mobileLayout)
     local T=ui.T
     local parent=options.Parent
     if not parent and type(gethui)=='function' then pcall(function() parent=gethui() end) end
@@ -42,26 +42,29 @@ return function(ui,input,state,options)
         local view=screen.AbsoluteSize
         if view.X<10 or view.Y<10 then return end
         local desired=tonumber(state:Get('Settings.Appearance.Scale',100)) or 100
-        local compact=ui.Touch or view.X<700
-        local width=compact and math.min(780,view.X-24) or T.Width
-        local height=compact and math.min(600,view.Y-24) or T.Height
-        local sidebar=compact and 68 or T.Sidebar
+        local mobile=ui.Touch or view.X<700
+        local layout=mobile and mobileLayout(view) or {Width=T.Width,Height=T.Height,Sidebar=T.Sidebar,Header=T.Header,Rail=false}
+        local compact=layout.Rail
+        local width,height,sidebar=layout.Width,layout.Height,layout.Sidebar
+        local headerHeight=layout.Header
+        self.Mobile=mobile
         self.LayoutWidth=width; self.LayoutHeight=height; self.SidebarWidth=sidebar
         holder.Size=UDim2.fromOffset(width,height)
-        scale.Scale=compact and 1 or math.max(0.2,math.min(desired/100,(view.X-24)/width,(view.Y-24)/height))
+        scale.Scale=math.max(0.2,math.min(desired/100,(view.X-24)/width,(view.Y-24)/height))
         ui.ScaleFactor=scale.Scale
         divider.Position=UDim2.fromOffset(sidebar,14)
-        brand.Size=UDim2.fromOffset(sidebar,T.Header); brandTitle.Visible=not compact; subtitle.Visible=not compact
+        brand.Size=UDim2.fromOffset(sidebar,headerHeight); brandTitle.Visible=not compact; subtitle.Visible=not compact
         navigation.Size=UDim2.new(0,sidebar-20,1,compact and -137 or -149)
-        navigation.Position=UDim2.fromOffset(10,70)
+        navigation.Position=UDim2.fromOffset(10,headerHeight+5)
+        navigation.Size=UDim2.new(0,sidebar-20,1,-headerHeight-72)
         gameCard.Size=UDim2.fromOffset(sidebar-16,53); gameCard.Position=UDim2.new(0,8,1,-61)
         gameTitle.Visible=not compact; dot.Visible=not compact
         for _,child in ipairs(gameCard:GetChildren()) do if child:IsA('TextLabel') then child.Visible=not compact end end
-        header.Position=UDim2.fromOffset(sidebar+12,0); header.Size=UDim2.new(1,-sidebar-24,0,T.Header)
-        badge.Visible=not compact
-        title.Size=UDim2.new(1,compact and -88 or -175,0,23)
-        description.Size=UDim2.new(1,compact and -88 or -175,0,16)
-        content.Position=UDim2.fromOffset(sidebar+12,T.Header+9); content.Size=UDim2.new(1,-sidebar-24,1,-T.Header-23)
+        header.Position=UDim2.fromOffset(sidebar+12,0); header.Size=UDim2.new(1,-sidebar-24,0,headerHeight)
+        badge.Visible=not mobile
+        title.Size=UDim2.new(1,mobile and -88 or -175,0,23)
+        description.Size=UDim2.new(1,mobile and -88 or -175,0,16)
+        content.Position=UDim2.fromOffset(sidebar+12,headerHeight+5); content.Size=UDim2.new(1,-sidebar-24,1,-headerHeight-17)
         for _,entry in pairs(self.Pages) do
             entry.Row.Size=UDim2.new(1,0,0,compact and 56 or 44)
             entry.Tile.Position=UDim2.fromOffset(compact and 7 or 0,compact and 0 or 5)
@@ -70,6 +73,8 @@ return function(ui,input,state,options)
             entry.Label.Position=compact and UDim2.fromOffset(-3,35) or UDim2.fromOffset(44,0)
             entry.Label.Size=compact and UDim2.new(1,6,0,18) or UDim2.new(1,-48,1,0)
         end
+        description.Visible=not mobile
+        subtitle.Visible=not mobile
         shadow.Visible=not ui.LowEffects
         local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,width*scale.Scale/2+12,math.max(width*scale.Scale/2+12,view.X-width*scale.Scale/2-12))
         local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,height*scale.Scale/2+12,math.max(height*scale.Scale/2+12,view.Y-height*scale.Scale/2-12))
@@ -82,7 +87,8 @@ return function(ui,input,state,options)
         holder.Visible=self.Visible; launcher.Visible=not self.Visible
     end
     function app:AddPage(spec)
-        local row=ui:Button(navigation,'',{Name=spec.Id,Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
+        self.NavCount=(self.NavCount or 0)+1
+        local row=ui:Button(navigation,'',{Name=spec.Id,LayoutOrder=self.NavCount,Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
         local tile=ui:Frame(row,{Size=UDim2.fromOffset(34,34),Position=UDim2.fromOffset(0,3),BackgroundColor3=T.Inset,BackgroundTransparency=0}); ui:Round(tile,7)
         local icon=ui:Icon(tile,spec.Icon,22,UDim2.fromOffset(6,6),T.Muted)
         local navText=ui:Label(row,spec.Title,13,UDim2.fromOffset(44,0),UDim2.new(1,-40,1,0))

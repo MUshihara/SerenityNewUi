@@ -8,7 +8,12 @@ return function(ui,parent,title,open,onOpen)
     local section={Frame=root,Body=body,Open=open~=false,Revision=0}
     local function size(animate)
         ui:Tween(caret,animate and 0.18 or 0,{Rotation=section.Open and 180 or 0})
-        local target=44+(section.Open and (list.AbsoluteContentSize.Y/math.max(0.2,ui.ScaleFactor)+5) or 0)
+        -- All control rows have explicit logical heights. Avoid scale-dependent layout measurements.
+        local height=5
+        for _,child in ipairs(body:GetChildren()) do
+            if child:IsA('Frame') and child.Visible then height=height+child.Size.Y.Offset end
+        end
+        local target=44+(section.Open and height or 0)
         ui:Tween(root,animate and 0.18 or 0,{Size=UDim2.new(1,0,0,target)})
     end
     function section:SetOpen(value,instant)
@@ -19,5 +24,6 @@ return function(ui,parent,title,open,onOpen)
     ui.R:Connect(list:GetPropertyChangedSignal('AbsoluteContentSize'),function() size(false) end)
     table.insert(ui.LayoutCallbacks,function() size(false) end)
     size(false)
+    task.defer(function() if not ui.R.Destroyed then size(false) end end)
     return section
 end
