@@ -8,7 +8,7 @@ return function(M,options)
     manifest.Pages[#manifest.Pages+1]={Id='Feedback',Title='Feedback',Description='Report a bug or share an idea',Icon='message-square',Features={},SharedPreview=true}
     assert(manifest.SerenityAPIVersion==3,'Expected V3 manifest')
     local runtime=M.Runtime.new()
-    local defaults={['View.Page']='About'}
+    local defaults={['View.Page']='About',['View.LauncherX']=18,['View.LauncherY']=180}
     for _,page in ipairs(manifest.Pages) do
         defaults['View.Tab.'..page.Id]=(page.Tabs and page.Tabs[1].Id) or 'Main'
         for _,feature in ipairs(page.Features) do
@@ -88,6 +88,10 @@ return function(M,options)
                 ui:Button(panel,'Reset',{Position=UDim2.fromOffset(172,114),Size=UDim2.fromOffset(152,32),BackgroundColor3=ui.T.Accent},function()
                     popup:Close()
                     for key,control in pairs(self.Controls) do if defaults[key]~=nil and control.Set then control:Set(defaults[key],false) end end
+                    state.Data={}
+                    for key,value in pairs(defaults) do state.Data[key]=value end
+                    self:FitLauncher()
+                    self:SelectPage('About')
                     state:Save()
                 end)
             elseif name=='Destroy' then self:Destroy() end
@@ -116,7 +120,7 @@ return function(M,options)
             local pageFrame=app:AddPage(page)
             app.SearchEntries[#app.SearchEntries+1]={Title=page.Title,Path=page.Title,Page=page.Id,Target=pageFrame}
             if page.Id=='Feedback' then
-                M.Feedback(ui,app,pageFrame,options)
+                M.Feedback(ui,app,pageFrame,options,choice)
             elseif page.Id=='About' then
                 local scroll=scroller(pageFrame,104)
                 local player=game:GetService('Players').LocalPlayer
@@ -292,6 +296,7 @@ return function(M,options)
         app:SetLive('Server.Session.Place',game.PlaceId)
         local saved=state:Get('View.Page','About')
         app:SelectPage(app.Pages[saved] and saved or 'About')
+        app:SetVisible(not state:Get('Settings.Interface.StartMinimized',false))
         app.Adapter={Controls=app.Controls,SetLive=function(_,...) app:SetLive(...) end}
     end,debug.traceback)
     if not ok then runtime:Destroy(); error(err,0) end

@@ -35,9 +35,9 @@ return function(ui,input,state,options,mobileLayout)
     local minimize=ui:Button(header,'',{Position=UDim2.new(1,-40,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
     ui:Icon(minimize,'minus',22,UDim2.fromOffset(9,9),T.Muted)
     local content=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,T.Header+9),Size=UDim2.new(1,-T.Sidebar-32,1,-T.Header-23)})
-    local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(43,43),Visible=false,BackgroundColor3=T.Panel,ZIndex=4})
-    ui:Stroke(launcher); ui:New('ImageLabel',launcher,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(9,9),Size=UDim2.fromOffset(25,25)})
-    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle,LayoutWidth=T.Width,LayoutHeight=T.Height,SidebarWidth=T.Sidebar}
+    local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(56,56),Visible=true,BackgroundColor3=T.Panel,ZIndex=4})
+    ui:Stroke(launcher); ui:New('ImageLabel',launcher,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(9,9),Size=UDim2.fromOffset(38,38)})
+    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle,Launcher=launcher,LayoutWidth=T.Width,LayoutHeight=T.Height,SidebarWidth=T.Sidebar}
     function app:Fit()
         local view=screen.AbsoluteSize
         if view.X<10 or view.Y<10 then return end
@@ -79,12 +79,19 @@ return function(ui,input,state,options,mobileLayout)
         local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,width*scale.Scale/2+12,math.max(width*scale.Scale/2+12,view.X-width*scale.Scale/2-12))
         local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,height*scale.Scale/2+12,math.max(height*scale.Scale/2+12,view.Y-height*scale.Scale/2-12))
         holder.Position=UDim2.fromOffset(x,y)
+        self:FitLauncher()
         for _,callback in ipairs(ui.LayoutCallbacks) do callback() end
         if self.Popup then self.Popup:Close(true) end
     end
+    function app:FitLauncher()
+        local view=screen.AbsoluteSize
+        local x=math.clamp(tonumber(state:Get('View.LauncherX',18)) or 18,8,math.max(8,view.X-64))
+        local y=math.clamp(tonumber(state:Get('View.LauncherY',180)) or 180,8,math.max(8,view.Y-64))
+        launcher.Position=UDim2.fromOffset(x,y)
+    end
     function app:SetVisible(value)
         self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close(true) end
-        holder.Visible=self.Visible; launcher.Visible=not self.Visible
+        holder.Visible=self.Visible; launcher.Visible=true
     end
     function app:AddPage(spec)
         self.NavCount=(self.NavCount or 0)+1
@@ -131,7 +138,25 @@ return function(ui,input,state,options,mobileLayout)
     end
     dragRegion(brand); dragRegion(header)
     minimize.Activated:Connect(function() app:SetVisible(false) end)
-    launcher.Activated:Connect(function() app:SetVisible(true) end)
+    local dragged=false
+    launcher.InputBegan:Connect(function(event)
+        if event.UserInputType~=Enum.UserInputType.MouseButton1 and event.UserInputType~=Enum.UserInputType.Touch then return end
+        local start=event.Position;local origin=launcher.Position
+        dragged=false
+        input:Capture(event,function(pos)
+            local dx,dy=pos.X-start.X,pos.Y-start.Y
+            if dx*dx+dy*dy>36 then dragged=true end
+            if dragged then
+                local view=screen.AbsoluteSize
+                launcher.Position=UDim2.fromOffset(math.clamp(origin.X.Offset+dx,8,math.max(8,view.X-64)),math.clamp(origin.Y.Offset+dy,8,math.max(8,view.Y-64)))
+            end
+        end,function()
+            if dragged then
+                state:Set('View.LauncherX',launcher.Position.X.Offset);state:Set('View.LauncherY',launcher.Position.Y.Offset)
+            end
+        end)
+    end)
+    launcher.Activated:Connect(function() if not dragged then app:SetVisible(not app.Visible) end end)
     table.insert(input.Shortcuts,function(event)
         if event.KeyCode==Enum.KeyCode.RightControl then app:SetVisible(not app.Visible); return true end
     end)

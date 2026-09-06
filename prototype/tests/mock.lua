@@ -215,10 +215,23 @@ end end
 phonk.Controls['Automation.Farm.AutoClick']:Set(true)
 assert(callbackCount==1,'Changed callback was not called exactly once')
 local cleaned=false;phonk.Runtime:TrackCleanup(function() cleaned=true end)
+phonk.Controls['Settings.Interface.StartMinimized']:Set(true);phonk.Config:Save()
+_G.SerenityFeedbackWebhook='https://discord.com/api/webhooks/123/test'
 local nextPhonk=bridge.Build(manifest);flushDeferred()
+assert(not nextPhonk.Visible and nextPhonk.Launcher.Visible,'startup minimize or persistent launcher failed')
+nextPhonk.Launcher.Activated:Fire();assert(nextPhonk.Visible and nextPhonk.Launcher.Visible,'launcher toggle failed')
 assert(cleaned and phonk.Runtime.Destroyed,'Phonk replacement missed cleanup')
 assert(nextPhonk.Controls['Automation.Farm.AutoClick']:Get()==false,'Phonk did not start OFF')
 assert(nextPhonk.Pages.GameTuning and nextPhonk.Pages.Settings,'game tuning and UI settings collided')
+local touch={UserInputType=Enum.UserInputType.Touch,Position=Vector2.new(20,180)}
+nextPhonk.Launcher.InputBegan:Fire(touch)
+touch.Position=Vector2.new(120,230);input.InputChanged:Fire(touch);input.InputEnded:Fire(touch)
+nextPhonk.Launcher.Activated:Fire()
+assert(nextPhonk.Visible,'drag incorrectly toggled window')
+assert(nextPhonk.Config:Get('View.LauncherX')==118,'launcher position was not saved')
+nextPhonk:Action('Reset')
+for _,child in ipairs(nextPhonk.Popup.Panel:GetChildren())do if child.ClassName=='TextButton' and child.Text=='Reset' then child.Activated:Fire();break end end
+assert(nextPhonk.Config:Get('View.LauncherX')==18 and nextPhonk.Config:Get('Settings.Interface.StartMinimized')==false,'reset failed to clear saved preferences')
 local sent=0
 request=function(payload)
     sent=sent+1
@@ -228,13 +241,13 @@ request=function(payload)
     return {StatusCode=204}
 end
 assert(nextPhonk.Feedback,'missing shared report form')
-nextPhonk.Feedback.Destination.Text='https://discord.com/api/webhooks/123/test'
-nextPhonk.Feedback.Destination.FocusLost:Fire()
+nextPhonk.Feedback.Category:Set('New Feature')
 assert(sent==0,'destination setup sent a report')
 nextPhonk.Feedback.Draft.Text='The dropdown is clipped on my screen.'
 nextPhonk.Feedback.Submit();assert(sent==1 and nextPhonk.Feedback.Draft.Text=='','report success path failed')
 nextPhonk.Feedback.Draft.Text='A second report should be throttled.'
 nextPhonk.Feedback.Submit();assert(sent==1,'report cooldown failed')
 request=nil
+_G.SerenityFeedbackWebhook=nil
 nextPhonk:Destroy();assert(activeConnections==0,'Phonk UI connection leak')
 print('PASS: actual Phonk manifest controls '..count..'; callback wiring; OFF on restart; cleanup; settings separation.')

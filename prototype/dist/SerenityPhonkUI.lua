@@ -654,8 +654,10 @@ end)()
 -- MODULE: components/Feedback.lua
 M.Feedback = (function()
 -- Shared, user-submitted reports. No automatic collection or startup sends.
-return function(ui,app,parent,options)
+return function(ui,app,parent,options,choice)
     local service=game:GetService('HttpService')
+    local relay=options.FeedbackRelay or ((getgenv and getgenv()) or _G).SerenityFeedbackRelay
+    if type(relay)~='string' or not relay:match('^https://[%w%.%-]+/') then relay=nil end
     local endpoint=options.FeedbackWebhook or ((getgenv and getgenv()) or _G).SerenityFeedbackWebhook or ''
     local path='SerenityConcept02/feedback-destination.txt'
     if endpoint=='' and type(isfile)=='function' and type(readfile)=='function' then
@@ -669,9 +671,7 @@ return function(ui,app,parent,options)
         ui:Label(row,title,13,UDim2.fromOffset(12,6),UDim2.new(1,-24,0,24),nil,true)
         return row
     end
-    local destination=field('Report destination · local setup',86)
-    local url=ui:New('TextBox',destination,{Position=UDim2.fromOffset(12,36),Size=UDim2.new(1,-24,0,38),Text='',PlaceholderText=valid(endpoint) and 'Configured on this device' or 'Paste your Discord webhook here',ClearTextOnFocus=false,Font=ui.T.Font,TextSize=12,TextColor3=ui.T.Text,BackgroundColor3=ui.T.Inset,BorderSizePixel=0})
-    ui:Round(url,6)
+    local category=choice(scroll,{Title='Report type',Options={'Bug Report','Feedback','New Feature','New Game Request'},Default='Bug Report'},false)
     local draft=field('Bug report or feedback',176)
     local box=ui:New('TextBox',draft,{Position=UDim2.fromOffset(12,36),Size=UDim2.new(1,-24,0,128),Text='',PlaceholderText='What happened? What did you expect? Include steps to reproduce.',MultiLine=true,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,ClearTextOnFocus=false,Font=ui.T.Font,TextSize=13,TextColor3=ui.T.Text,BackgroundColor3=ui.T.Inset,BorderSizePixel=0})
     ui:Round(box,6);ui:Pad(box,8)
@@ -680,33 +680,23 @@ return function(ui,app,parent,options)
     local status=ui:Label(scroll,'Sends only when you press Submit.',12,nil,UDim2.new(1,0,0,36),ui.T.Muted)
     local busy,last=false,-math.huge
     local button
-    url.FocusLost:Connect(function()
-        if url.Text=='' then return end
-        if not valid(url.Text) then status.Text='Enter a valid Discord webhook URL.';return end
-        endpoint=url.Text;url.Text='';url.PlaceholderText='Configured for this session'
-        if type(writefile)=='function' then
-            local ok=pcall(function() if type(makefolder)=='function' then pcall(makefolder,'SerenityConcept02') end;writefile(path,endpoint) end)
-            if ok then url.PlaceholderText='Configured on this device' end
-        end
-        status.Text='Destination configured. Nothing sent.'
-    end)
     local function submit()
         if busy then return end
-        if not valid(endpoint) then status.Text='Configure the report destination first.';return end
+        if not relay and not valid(endpoint) then status.Text='Reporting is not configured in this build.';return end
         local message=box.Text:match('^%s*(.-)%s*$')
         if #message<10 or #message>1800 then status.Text='Write between 10 and 1800 characters.';return end
         if os.clock()-last<30 then status.Text='Please wait 30 seconds between reports.';return end
         local send=request or http_request or (syn and syn.request)
         if type(send)~='function' then status.Text='HTTP requests are unavailable on this device.';return end
         busy=true;last=os.clock();button.Text='Sending…';status.Text='Sending your report…'
-        local body=service:JSONEncode({allowed_mentions={parse={}},embeds={{title='Serenity · User feedback',description=message,fields={
+        local body=service:JSONEncode({allowed_mentions={parse={}},embeds={{title='Serenity · '..category:Get(),description=message,fields={
             {name='Game',value=tostring(options.Manifest and options.Manifest.GameName or app.GameTitle.Text)},
             {name='Place ID',value=tostring(game.PlaceId)},
             {name='Job ID',value=tostring(game.JobId or 'Unavailable')},
             {name='UI build',value='Concept 02 · Feedback preview'},
         }}}})
         task.spawn(function()
-            local ok,response=pcall(send,{Url=endpoint,Method='POST',Headers={['Content-Type']='application/json'},Body=body})
+            local ok,response=pcall(send,{Url=relay or endpoint,Method='POST',Headers={['Content-Type']='application/json'},Body=body})
             if ui.R.Destroyed then return end
             busy=false;button.Text='Submit report'
             local code=ok and type(response)=='table' and tonumber(response.StatusCode or response.Status)
@@ -719,7 +709,7 @@ return function(ui,app,parent,options)
         end)
     end
     button=ui:Button(scroll,'Submit report',{Size=UDim2.new(1,0,0,44),BackgroundColor3=ui.T.Accent},submit)
-    app.Feedback={Submit=submit,Draft=box,Destination=url,Status=status}
+    app.Feedback={Submit=submit,Draft=box,Category=category,Status=status}
 end
 end)()
 
@@ -1014,9 +1004,9 @@ return function(ui,input,state,options,mobileLayout)
     local minimize=ui:Button(header,'',{Position=UDim2.new(1,-40,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
     ui:Icon(minimize,'minus',22,UDim2.fromOffset(9,9),T.Muted)
     local content=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,T.Header+9),Size=UDim2.new(1,-T.Sidebar-32,1,-T.Header-23)})
-    local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(43,43),Visible=false,BackgroundColor3=T.Panel,ZIndex=4})
-    ui:Stroke(launcher); ui:New('ImageLabel',launcher,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(9,9),Size=UDim2.fromOffset(25,25)})
-    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle,LayoutWidth=T.Width,LayoutHeight=T.Height,SidebarWidth=T.Sidebar}
+    local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(56,56),Visible=true,BackgroundColor3=T.Panel,ZIndex=4})
+    ui:Stroke(launcher); ui:New('ImageLabel',launcher,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(9,9),Size=UDim2.fromOffset(38,38)})
+    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle,Launcher=launcher,LayoutWidth=T.Width,LayoutHeight=T.Height,SidebarWidth=T.Sidebar}
     function app:Fit()
         local view=screen.AbsoluteSize
         if view.X<10 or view.Y<10 then return end
@@ -1058,12 +1048,19 @@ return function(ui,input,state,options,mobileLayout)
         local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,width*scale.Scale/2+12,math.max(width*scale.Scale/2+12,view.X-width*scale.Scale/2-12))
         local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,height*scale.Scale/2+12,math.max(height*scale.Scale/2+12,view.Y-height*scale.Scale/2-12))
         holder.Position=UDim2.fromOffset(x,y)
+        self:FitLauncher()
         for _,callback in ipairs(ui.LayoutCallbacks) do callback() end
         if self.Popup then self.Popup:Close(true) end
     end
+    function app:FitLauncher()
+        local view=screen.AbsoluteSize
+        local x=math.clamp(tonumber(state:Get('View.LauncherX',18)) or 18,8,math.max(8,view.X-64))
+        local y=math.clamp(tonumber(state:Get('View.LauncherY',180)) or 180,8,math.max(8,view.Y-64))
+        launcher.Position=UDim2.fromOffset(x,y)
+    end
     function app:SetVisible(value)
         self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close(true) end
-        holder.Visible=self.Visible; launcher.Visible=not self.Visible
+        holder.Visible=self.Visible; launcher.Visible=true
     end
     function app:AddPage(spec)
         self.NavCount=(self.NavCount or 0)+1
@@ -1110,7 +1107,25 @@ return function(ui,input,state,options,mobileLayout)
     end
     dragRegion(brand); dragRegion(header)
     minimize.Activated:Connect(function() app:SetVisible(false) end)
-    launcher.Activated:Connect(function() app:SetVisible(true) end)
+    local dragged=false
+    launcher.InputBegan:Connect(function(event)
+        if event.UserInputType~=Enum.UserInputType.MouseButton1 and event.UserInputType~=Enum.UserInputType.Touch then return end
+        local start=event.Position;local origin=launcher.Position
+        dragged=false
+        input:Capture(event,function(pos)
+            local dx,dy=pos.X-start.X,pos.Y-start.Y
+            if dx*dx+dy*dy>36 then dragged=true end
+            if dragged then
+                local view=screen.AbsoluteSize
+                launcher.Position=UDim2.fromOffset(math.clamp(origin.X.Offset+dx,8,math.max(8,view.X-64)),math.clamp(origin.Y.Offset+dy,8,math.max(8,view.Y-64)))
+            end
+        end,function()
+            if dragged then
+                state:Set('View.LauncherX',launcher.Position.X.Offset);state:Set('View.LauncherY',launcher.Position.Y.Offset)
+            end
+        end)
+    end)
+    launcher.Activated:Connect(function() if not dragged then app:SetVisible(not app.Visible) end end)
     table.insert(input.Shortcuts,function(event)
         if event.KeyCode==Enum.KeyCode.RightControl then app:SetVisible(not app.Visible); return true end
     end)
@@ -1194,12 +1209,13 @@ return {
                 {Id='ReducedMotion',Type='Switch',Title='Reduce Motion',Default=false,Effect='Motion'},
             }},
             {Id='Interface',Title='Interface',Tab='Interface',Expanded=true,Controls={
+                {Id='StartMinimized',Type='Switch',Title='Start Minimized',Default=false},
                 {Id='Remember',Type='Paragraph',Title='Remember your layout',Text='Page, tab, section and control settings are saved when local file access is available.'},
                 {Id='Center',Type='Action',Title='Center Window',Action='Center',Icon='focus'},
             }},
             {Id='Profiles',Title='Profiles',Tab='Profiles',Expanded=true,Controls={
                 {Id='Save',Type='Action',Title='Save Preview Settings',Action='Save',Icon='save'},
-                {Id='Reset',Type='Action',Title='Reset Preview Settings',Action='Reset',Icon='rotate-cw'},
+                {Id='Reset',Type='Action',Title='Reset Saved Config',Action='Reset',Icon='rotate-cw'},
                 {Id='Close',Type='Action',Title='Close Preview',Action='Destroy',Icon='x'},
             }},
         }},
@@ -1219,7 +1235,7 @@ return function(M,options)
     manifest.Pages[#manifest.Pages+1]={Id='Feedback',Title='Feedback',Description='Report a bug or share an idea',Icon='message-square',Features={},SharedPreview=true}
     assert(manifest.SerenityAPIVersion==3,'Expected V3 manifest')
     local runtime=M.Runtime.new()
-    local defaults={['View.Page']='About'}
+    local defaults={['View.Page']='About',['View.LauncherX']=18,['View.LauncherY']=180}
     for _,page in ipairs(manifest.Pages) do
         defaults['View.Tab.'..page.Id]=(page.Tabs and page.Tabs[1].Id) or 'Main'
         for _,feature in ipairs(page.Features) do
@@ -1299,6 +1315,10 @@ return function(M,options)
                 ui:Button(panel,'Reset',{Position=UDim2.fromOffset(172,114),Size=UDim2.fromOffset(152,32),BackgroundColor3=ui.T.Accent},function()
                     popup:Close()
                     for key,control in pairs(self.Controls) do if defaults[key]~=nil and control.Set then control:Set(defaults[key],false) end end
+                    state.Data={}
+                    for key,value in pairs(defaults) do state.Data[key]=value end
+                    self:FitLauncher()
+                    self:SelectPage('About')
                     state:Save()
                 end)
             elseif name=='Destroy' then self:Destroy() end
@@ -1327,7 +1347,7 @@ return function(M,options)
             local pageFrame=app:AddPage(page)
             app.SearchEntries[#app.SearchEntries+1]={Title=page.Title,Path=page.Title,Page=page.Id,Target=pageFrame}
             if page.Id=='Feedback' then
-                M.Feedback(ui,app,pageFrame,options)
+                M.Feedback(ui,app,pageFrame,options,choice)
             elseif page.Id=='About' then
                 local scroll=scroller(pageFrame,104)
                 local player=game:GetService('Players').LocalPlayer
@@ -1503,6 +1523,7 @@ return function(M,options)
         app:SetLive('Server.Session.Place',game.PlaceId)
         local saved=state:Get('View.Page','About')
         app:SelectPage(app.Pages[saved] and saved or 'About')
+        app:SetVisible(not state:Get('Settings.Interface.StartMinimized',false))
         app.Adapter={Controls=app.Controls,SetLive=function(_,...) app:SetLive(...) end}
     end,debug.traceback)
     if not ok then runtime:Destroy(); error(err,0) end

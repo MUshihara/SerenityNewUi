@@ -62,3 +62,11 @@ Mobile search listens for keyboard visibility/size while open, sizes results abo
 Added reusable Feedback page to both standalone and Phonk builds. Destination is configured locally or via SerenityFeedbackWebhook, outside profile config and public source. Submit includes explicit draft plus game name, Place ID, Job ID and UI version; no automatic reports. Status distinguishes success/failure, drafts survive failure, requests have a 30-second local cooldown, and mentions are disabled. No live request was sent. Mock checks cover setup-without-send, HTTP 204 success, payload context and cooldown.
 
 Pinned About profile outside its scroller; added interaction-only icon selection scale and truthful integration release text. Low Effects remains available. A public, preconfigured reporting service for all users still requires a server-side relay so the Discord credential is not shipped in client code. The preview uses per-device destination setup.
+
+## Launcher and report categories
+
+Launcher is 56×56, stays visible when the window is open or minimized, toggles the window on tap, and uses drag-distance detection to avoid toggling after a drag. It clamps to the viewport and saves coordinates on release. Start Minimized is saved separately from game automation defaults. Reset Saved Config replaces saved config data with defaults and resets navigation/launcher placement; Phonk still starts automation OFF.
+
+Feedback destination setup removed from the normal form. Four categories are available. Existing locally configured owner endpoint remains supported; a shared FeedbackRelay endpoint is supported for future distribution. Relay source is prepared but not hosted; public owner routing is not yet operational.
+
+Patterns reviewed: WindUI's recent draggable-element improvements (https://github.com/Footagesus/WindUI/releases) and Rayfield configuration persistence (https://docs.sirius.menu/rayfield/getting-started). No code copied from those libraries.

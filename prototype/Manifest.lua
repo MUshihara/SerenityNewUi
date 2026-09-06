@@ -66,12 +66,13 @@ return {
                 {Id='ReducedMotion',Type='Switch',Title='Reduce Motion',Default=false,Effect='Motion'},
             }},
             {Id='Interface',Title='Interface',Tab='Interface',Expanded=true,Controls={
+                {Id='StartMinimized',Type='Switch',Title='Start Minimized',Default=false},
                 {Id='Remember',Type='Paragraph',Title='Remember your layout',Text='Page, tab, section and control settings are saved when local file access is available.'},
                 {Id='Center',Type='Action',Title='Center Window',Action='Center',Icon='focus'},
             }},
             {Id='Profiles',Title='Profiles',Tab='Profiles',Expanded=true,Controls={
                 {Id='Save',Type='Action',Title='Save Preview Settings',Action='Save',Icon='save'},
-                {Id='Reset',Type='Action',Title='Reset Preview Settings',Action='Reset',Icon='rotate-cw'},
+                {Id='Reset',Type='Action',Title='Reset Saved Config',Action='Reset',Icon='rotate-cw'},
                 {Id='Close',Type='Action',Title='Close Preview',Action='Destroy',Icon='x'},
             }},
         }},
