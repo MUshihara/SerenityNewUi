@@ -2,7 +2,10 @@ return function(M,options)
     options=options or {}
     options.AssetBase=options.AssetBase or 'https://raw.githubusercontent.com/MUshihara/SerenityNewUi/77e5a1d2a4bc5e662bf52258a22b2976aedba1f8/prototype/assets/'
     options.DiscordInvite=options.DiscordInvite or 'https://discord.gg/ccsvkN7Pp'
-    local manifest=options.Manifest or M.Manifest
+    local sourceManifest=options.Manifest or M.Manifest
+    local manifest={};for k,v in pairs(sourceManifest)do manifest[k]=v end
+    manifest.Pages={};for _,page in ipairs(sourceManifest.Pages)do manifest.Pages[#manifest.Pages+1]=page end
+    manifest.Pages[#manifest.Pages+1]={Id='Feedback',Title='Feedback',Description='Report a bug or share an idea',Icon='message-square',Features={},SharedPreview=true}
     assert(manifest.SerenityAPIVersion==3,'Expected V3 manifest')
     local runtime=M.Runtime.new()
     local defaults={['View.Page']='About'}
@@ -112,10 +115,12 @@ return function(M,options)
         for _,page in ipairs(manifest.Pages) do
             local pageFrame=app:AddPage(page)
             app.SearchEntries[#app.SearchEntries+1]={Title=page.Title,Path=page.Title,Page=page.Id,Target=pageFrame}
-            if page.Id=='About' then
-                local scroll=scroller(pageFrame)
+            if page.Id=='Feedback' then
+                M.Feedback(ui,app,pageFrame,options)
+            elseif page.Id=='About' then
+                local scroll=scroller(pageFrame,104)
                 local player=game:GetService('Players').LocalPlayer
-                local profile=ui:Panel(scroll,{Size=UDim2.new(1,0,0,94),LayoutOrder=-2})
+                local profile=ui:Panel(pageFrame,{Size=UDim2.new(1,0,0,94),LayoutOrder=-2})
                 local avatar=ui:New('ImageLabel',profile,{BackgroundColor3=ui.T.Inset,BorderSizePixel=0,Image='rbxthumb://type=AvatarHeadShot&id='..tostring(player.UserId or 0)..'&w=150&h=150',Position=UDim2.fromOffset(12,14),Size=UDim2.fromOffset(52,52)})
                 ui:Round(avatar,26)
                 ui:Label(profile,player.DisplayName or 'Welcome',15,UDim2.fromOffset(76,12),UDim2.new(1,-88,0,24),nil,true)
@@ -132,13 +137,13 @@ return function(M,options)
                 end
                 task.delay(1,tick)
                 local section=M.Section(ui,scroll,'What’s new',false,function() popup:Close() end)
-                controls.Paragraph(section.Body,{Title='Preview · September 6, 2026',Text='Personal profile, session timer, compact notifications and mobile layouts.',Height=80})
+                controls.Paragraph(section.Body,{Title='Preview · September 6, 2026',Text='Pinned profile, shared feedback reports, fluid selection and mobile layouts.',Height=80})
                 local cards=ui:Frame(scroll,{Size=UDim2.new(1,0,0,280)})
                 local community=card(cards,'Community',0,'Serenity Community','Meet the community','messages-square','Copy Discord Link',function() app:Copy(options.DiscordInvite,'Discord invite') end)
                 local discord=ui:New('ImageLabel',community,{BackgroundTransparency=1,Position=UDim2.new(1,-36,0,7),Size=UDim2.fromOffset(24,24),Image=''})
                 assets:Load('Discord',discord)
                 local updates=card(cards,'Updates',0.5,'Release Notes','See the latest changes','megaphone','View Changelog',function()
-                    popup:Message('Preview · September 6, 2026','• Avatar and session timer\n• Discord branding and copy feedback\n• Dedicated mobile layout\n• Larger icons and Low Effects\n\nGame automation is not connected.')
+                    popup:Message('Feedback preview','• Pinned avatar and session timer\n• Shared bug-report form with game context\n• Fluid navigation selection\n• Dedicated mobile layout\n\n'..(options.Manifest and 'Connected to the supplied game controls.' or 'Standalone UI demonstration.'))
                 end)
                 app.AboutCards={Container=cards,Community=community,Updates=updates}
                 local function arrangeCards()

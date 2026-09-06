@@ -16,7 +16,8 @@ return {Build=function(source)
         if page.Id=='Settings' then
             for _,feature in ipairs(page.Features)do feature.ConfigPage='Settings' end
             page.Id='GameTuning';page.Title='Game Tuning'
-        elseif page.Id=='Performance' then page.Title='Misc' end
+        elseif page.Id=='Performance' then page.Title='Misc'
+        elseif page.Id=='Dashboard' then page.Title='Game Info' end
         for _,feature in ipairs(page.Features)do
             for i,control in ipairs(feature.Controls)do control.Id=control.Id or ('Info'..i) end
         end

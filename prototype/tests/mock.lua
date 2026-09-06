@@ -219,5 +219,22 @@ local nextPhonk=bridge.Build(manifest);flushDeferred()
 assert(cleaned and phonk.Runtime.Destroyed,'Phonk replacement missed cleanup')
 assert(nextPhonk.Controls['Automation.Farm.AutoClick']:Get()==false,'Phonk did not start OFF')
 assert(nextPhonk.Pages.GameTuning and nextPhonk.Pages.Settings,'game tuning and UI settings collided')
+local sent=0
+request=function(payload)
+    sent=sent+1
+    local body=json[payload.Body]
+    assert(payload.Method=='POST' and body.embeds[1].fields[1].value=='+1 Phonk Evolution','missing game report context')
+    assert(body.allowed_mentions and #body.allowed_mentions.parse==0,'mentions enabled')
+    return {StatusCode=204}
+end
+assert(nextPhonk.Feedback,'missing shared report form')
+nextPhonk.Feedback.Destination.Text='https://discord.com/api/webhooks/123/test'
+nextPhonk.Feedback.Destination.FocusLost:Fire()
+assert(sent==0,'destination setup sent a report')
+nextPhonk.Feedback.Draft.Text='The dropdown is clipped on my screen.'
+nextPhonk.Feedback.Submit();assert(sent==1 and nextPhonk.Feedback.Draft.Text=='','report success path failed')
+nextPhonk.Feedback.Draft.Text='A second report should be throttled.'
+nextPhonk.Feedback.Submit();assert(sent==1,'report cooldown failed')
+request=nil
 nextPhonk:Destroy();assert(activeConnections==0,'Phonk UI connection leak')
 print('PASS: actual Phonk manifest controls '..count..'; callback wiring; OFF on restart; cleanup; settings separation.')

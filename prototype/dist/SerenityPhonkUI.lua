@@ -651,6 +651,78 @@ return function(ui,parent,title,open,onOpen)
 end
 end)()
 
+-- MODULE: components/Feedback.lua
+M.Feedback = (function()
+-- Shared, user-submitted reports. No automatic collection or startup sends.
+return function(ui,app,parent,options)
+    local service=game:GetService('HttpService')
+    local endpoint=options.FeedbackWebhook or ((getgenv and getgenv()) or _G).SerenityFeedbackWebhook or ''
+    local path='SerenityConcept02/feedback-destination.txt'
+    if endpoint=='' and type(isfile)=='function' and type(readfile)=='function' then
+        pcall(function() if isfile(path) then endpoint=readfile(path) end end)
+    end
+    local function valid(url) return type(url)=='string' and url:match('^https://discord%.com/api/webhooks/%d+/[%w_%-]+$')~=nil end
+    local scroll=ui:New('ScrollingFrame',parent,{Size=UDim2.fromScale(1,1),BackgroundTransparency=1,BorderSizePixel=0,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=3})
+    ui:List(scroll,10);ui:Pad(scroll,2,2,6,10)
+    local function field(title,height)
+        local row=ui:Panel(scroll,{Size=UDim2.new(1,0,0,height)})
+        ui:Label(row,title,13,UDim2.fromOffset(12,6),UDim2.new(1,-24,0,24),nil,true)
+        return row
+    end
+    local destination=field('Report destination · local setup',86)
+    local url=ui:New('TextBox',destination,{Position=UDim2.fromOffset(12,36),Size=UDim2.new(1,-24,0,38),Text='',PlaceholderText=valid(endpoint) and 'Configured on this device' or 'Paste your Discord webhook here',ClearTextOnFocus=false,Font=ui.T.Font,TextSize=12,TextColor3=ui.T.Text,BackgroundColor3=ui.T.Inset,BorderSizePixel=0})
+    ui:Round(url,6)
+    local draft=field('Bug report or feedback',176)
+    local box=ui:New('TextBox',draft,{Position=UDim2.fromOffset(12,36),Size=UDim2.new(1,-24,0,128),Text='',PlaceholderText='What happened? What did you expect? Include steps to reproduce.',MultiLine=true,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,ClearTextOnFocus=false,Font=ui.T.Font,TextSize=13,TextColor3=ui.T.Text,BackgroundColor3=ui.T.Inset,BorderSizePixel=0})
+    ui:Round(box,6);ui:Pad(box,8)
+    local context=field('Included with your report',108)
+    ui:Label(context,'Game: '..tostring(options.Manifest and options.Manifest.GameName or app.GameTitle.Text)..'\nPlace: '..tostring(game.PlaceId)..'\nServer Job ID and preview version. No profile settings.',11,UDim2.fromOffset(12,34),UDim2.new(1,-24,0,66),ui.T.Muted).TextWrapped=true
+    local status=ui:Label(scroll,'Sends only when you press Submit.',12,nil,UDim2.new(1,0,0,36),ui.T.Muted)
+    local busy,last=false,-math.huge
+    local button
+    url.FocusLost:Connect(function()
+        if url.Text=='' then return end
+        if not valid(url.Text) then status.Text='Enter a valid Discord webhook URL.';return end
+        endpoint=url.Text;url.Text='';url.PlaceholderText='Configured for this session'
+        if type(writefile)=='function' then
+            local ok=pcall(function() if type(makefolder)=='function' then pcall(makefolder,'SerenityConcept02') end;writefile(path,endpoint) end)
+            if ok then url.PlaceholderText='Configured on this device' end
+        end
+        status.Text='Destination configured. Nothing sent.'
+    end)
+    local function submit()
+        if busy then return end
+        if not valid(endpoint) then status.Text='Configure the report destination first.';return end
+        local message=box.Text:match('^%s*(.-)%s*$')
+        if #message<10 or #message>1800 then status.Text='Write between 10 and 1800 characters.';return end
+        if os.clock()-last<30 then status.Text='Please wait 30 seconds between reports.';return end
+        local send=request or http_request or (syn and syn.request)
+        if type(send)~='function' then status.Text='HTTP requests are unavailable on this device.';return end
+        busy=true;last=os.clock();button.Text='Sending…';status.Text='Sending your report…'
+        local body=service:JSONEncode({allowed_mentions={parse={}},embeds={{title='Serenity · User feedback',description=message,fields={
+            {name='Game',value=tostring(options.Manifest and options.Manifest.GameName or app.GameTitle.Text)},
+            {name='Place ID',value=tostring(game.PlaceId)},
+            {name='Job ID',value=tostring(game.JobId or 'Unavailable')},
+            {name='UI build',value='Concept 02 · Feedback preview'},
+        }}}})
+        task.spawn(function()
+            local ok,response=pcall(send,{Url=endpoint,Method='POST',Headers={['Content-Type']='application/json'},Body=body})
+            if ui.R.Destroyed then return end
+            busy=false;button.Text='Submit report'
+            local code=ok and type(response)=='table' and tonumber(response.StatusCode or response.Status)
+            if code and code>=200 and code<300 then
+                if box.Text==message then box.Text='' end
+                status.Text='Report delivered. Thank you.';app:Notify('Report delivered')
+            else
+                status.Text=code==429 and 'Discord rate limit. Try again later.' or 'Not delivered. Your draft is still here.'
+            end
+        end)
+    end
+    button=ui:Button(scroll,'Submit report',{Size=UDim2.new(1,0,0,44),BackgroundColor3=ui.T.Accent},submit)
+    app.Feedback={Submit=submit,Draft=box,Destination=url,Status=status}
+end
+end)()
+
 -- MODULE: components/Controls.lua
 M.Controls = (function()
 return function(ui,input,popup)
@@ -997,10 +1069,11 @@ return function(ui,input,state,options,mobileLayout)
         self.NavCount=(self.NavCount or 0)+1
         local row=ui:Button(navigation,'',{Name=spec.Id,LayoutOrder=self.NavCount,Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
         local tile=ui:Frame(row,{Size=UDim2.fromOffset(34,34),Position=UDim2.fromOffset(0,3),BackgroundColor3=T.Inset,BackgroundTransparency=0}); ui:Round(tile,7)
+        local tileScale=ui:New('UIScale',tile,{Scale=1})
         local icon=ui:Icon(tile,spec.Icon,22,UDim2.fromOffset(6,6),T.Muted)
         local navText=ui:Label(row,spec.Title,13,UDim2.fromOffset(44,0),UDim2.new(1,-40,1,0))
         local page=ui:Frame(content,{Size=UDim2.fromScale(1,1),Visible=false})
-        local entry={Row=row,Frame=page,Spec=spec,Tile=tile,Icon=icon,Label=navText}
+        local entry={Row=row,Frame=page,Spec=spec,Tile=tile,TileScale=tileScale,Icon=icon,Label=navText}
         self.Pages[spec.Id]=entry
         row.Activated:Connect(function() self:SelectPage(spec.Id) end)
         ui:Accent(function(color)
@@ -1016,6 +1089,8 @@ return function(ui,input,state,options,mobileLayout)
         title.Text=target.Spec.Title; description.Text=target.Spec.Description or ''
         for key,entry in pairs(self.Pages) do
             local selected=key==id; entry.Frame.Visible=selected
+            if selected then entry.TileScale.Scale=(ui.Reduced or ui.LowEffects) and 1 or 0.9 end
+            ui:Tween(entry.TileScale,0.18,{Scale=1})
             ui:Tween(entry.Tile,0.12,{BackgroundColor3=selected and T.Accent or T.Inset})
             entry.Icon.ImageColor3=selected and T.Text or T.Muted
             entry.Label.TextColor3=selected and T.Text or T.Muted
@@ -1138,7 +1213,10 @@ return function(M,options)
     options=options or {}
     options.AssetBase=options.AssetBase or 'https://raw.githubusercontent.com/MUshihara/SerenityNewUi/77e5a1d2a4bc5e662bf52258a22b2976aedba1f8/prototype/assets/'
     options.DiscordInvite=options.DiscordInvite or 'https://discord.gg/ccsvkN7Pp'
-    local manifest=options.Manifest or M.Manifest
+    local sourceManifest=options.Manifest or M.Manifest
+    local manifest={};for k,v in pairs(sourceManifest)do manifest[k]=v end
+    manifest.Pages={};for _,page in ipairs(sourceManifest.Pages)do manifest.Pages[#manifest.Pages+1]=page end
+    manifest.Pages[#manifest.Pages+1]={Id='Feedback',Title='Feedback',Description='Report a bug or share an idea',Icon='message-square',Features={},SharedPreview=true}
     assert(manifest.SerenityAPIVersion==3,'Expected V3 manifest')
     local runtime=M.Runtime.new()
     local defaults={['View.Page']='About'}
@@ -1248,10 +1326,12 @@ return function(M,options)
         for _,page in ipairs(manifest.Pages) do
             local pageFrame=app:AddPage(page)
             app.SearchEntries[#app.SearchEntries+1]={Title=page.Title,Path=page.Title,Page=page.Id,Target=pageFrame}
-            if page.Id=='About' then
-                local scroll=scroller(pageFrame)
+            if page.Id=='Feedback' then
+                M.Feedback(ui,app,pageFrame,options)
+            elseif page.Id=='About' then
+                local scroll=scroller(pageFrame,104)
                 local player=game:GetService('Players').LocalPlayer
-                local profile=ui:Panel(scroll,{Size=UDim2.new(1,0,0,94),LayoutOrder=-2})
+                local profile=ui:Panel(pageFrame,{Size=UDim2.new(1,0,0,94),LayoutOrder=-2})
                 local avatar=ui:New('ImageLabel',profile,{BackgroundColor3=ui.T.Inset,BorderSizePixel=0,Image='rbxthumb://type=AvatarHeadShot&id='..tostring(player.UserId or 0)..'&w=150&h=150',Position=UDim2.fromOffset(12,14),Size=UDim2.fromOffset(52,52)})
                 ui:Round(avatar,26)
                 ui:Label(profile,player.DisplayName or 'Welcome',15,UDim2.fromOffset(76,12),UDim2.new(1,-88,0,24),nil,true)
@@ -1268,13 +1348,13 @@ return function(M,options)
                 end
                 task.delay(1,tick)
                 local section=M.Section(ui,scroll,'What’s new',false,function() popup:Close() end)
-                controls.Paragraph(section.Body,{Title='Preview · September 6, 2026',Text='Personal profile, session timer, compact notifications and mobile layouts.',Height=80})
+                controls.Paragraph(section.Body,{Title='Preview · September 6, 2026',Text='Pinned profile, shared feedback reports, fluid selection and mobile layouts.',Height=80})
                 local cards=ui:Frame(scroll,{Size=UDim2.new(1,0,0,280)})
                 local community=card(cards,'Community',0,'Serenity Community','Meet the community','messages-square','Copy Discord Link',function() app:Copy(options.DiscordInvite,'Discord invite') end)
                 local discord=ui:New('ImageLabel',community,{BackgroundTransparency=1,Position=UDim2.new(1,-36,0,7),Size=UDim2.fromOffset(24,24),Image=''})
                 assets:Load('Discord',discord)
                 local updates=card(cards,'Updates',0.5,'Release Notes','See the latest changes','megaphone','View Changelog',function()
-                    popup:Message('Preview · September 6, 2026','• Avatar and session timer\n• Discord branding and copy feedback\n• Dedicated mobile layout\n• Larger icons and Low Effects\n\nGame automation is not connected.')
+                    popup:Message('Feedback preview','• Pinned avatar and session timer\n• Shared bug-report form with game context\n• Fluid navigation selection\n• Dedicated mobile layout\n\n'..(options.Manifest and 'Connected to the supplied game controls.' or 'Standalone UI demonstration.'))
                 end)
                 app.AboutCards={Container=cards,Community=community,Updates=updates}
                 local function arrangeCards()
@@ -1448,7 +1528,8 @@ return {Build=function(source)
         if page.Id=='Settings' then
             for _,feature in ipairs(page.Features)do feature.ConfigPage='Settings' end
             page.Id='GameTuning';page.Title='Game Tuning'
-        elseif page.Id=='Performance' then page.Title='Misc' end
+        elseif page.Id=='Performance' then page.Title='Misc'
+        elseif page.Id=='Dashboard' then page.Title='Game Info' end
         for _,feature in ipairs(page.Features)do
             for i,control in ipairs(feature.Controls)do control.Id=control.Id or ('Info'..i) end
         end

@@ -90,10 +90,11 @@ return function(ui,input,state,options,mobileLayout)
         self.NavCount=(self.NavCount or 0)+1
         local row=ui:Button(navigation,'',{Name=spec.Id,LayoutOrder=self.NavCount,Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
         local tile=ui:Frame(row,{Size=UDim2.fromOffset(34,34),Position=UDim2.fromOffset(0,3),BackgroundColor3=T.Inset,BackgroundTransparency=0}); ui:Round(tile,7)
+        local tileScale=ui:New('UIScale',tile,{Scale=1})
         local icon=ui:Icon(tile,spec.Icon,22,UDim2.fromOffset(6,6),T.Muted)
         local navText=ui:Label(row,spec.Title,13,UDim2.fromOffset(44,0),UDim2.new(1,-40,1,0))
         local page=ui:Frame(content,{Size=UDim2.fromScale(1,1),Visible=false})
-        local entry={Row=row,Frame=page,Spec=spec,Tile=tile,Icon=icon,Label=navText}
+        local entry={Row=row,Frame=page,Spec=spec,Tile=tile,TileScale=tileScale,Icon=icon,Label=navText}
         self.Pages[spec.Id]=entry
         row.Activated:Connect(function() self:SelectPage(spec.Id) end)
         ui:Accent(function(color)
@@ -109,6 +110,8 @@ return function(ui,input,state,options,mobileLayout)
         title.Text=target.Spec.Title; description.Text=target.Spec.Description or ''
         for key,entry in pairs(self.Pages) do
             local selected=key==id; entry.Frame.Visible=selected
+            if selected then entry.TileScale.Scale=(ui.Reduced or ui.LowEffects) and 1 or 0.9 end
+            ui:Tween(entry.TileScale,0.18,{Scale=1})
             ui:Tween(entry.Tile,0.12,{BackgroundColor3=selected and T.Accent or T.Inset})
             entry.Icon.ImageColor3=selected and T.Text or T.Muted
             entry.Label.TextColor3=selected and T.Text or T.Muted

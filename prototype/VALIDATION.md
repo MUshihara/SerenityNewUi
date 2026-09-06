@@ -56,3 +56,9 @@ Replaced the earlier scale-dependent section-height approach with the sum of exp
 Added one Roblox avatar thumbnail, display name, username and elapsed session timer. Timer uses one delayed tick per second, updates text only on the visible About page and exits after destruction. Compact replaceable copy/save notifications dismiss after 2.5 seconds. Discord mark is bundled as PNG bytes generated from Simple Icons' Discord SVG (https://github.com/simple-icons/simple-icons/blob/develop/icons/discord.svg); local-image support or a DiscordImage override is still needed to display it. Release notes show this preview's changes.
 
 Mobile search listens for keyboard visibility/size while open, sizes results above the keyboard and disconnects on close. Mock tests cover toast replacement and keyboard bounds alongside previous cleanup checks. Actual thumbnail loading and phone keyboard positioning still require device verification.
+
+## Shared feedback preview
+
+Added reusable Feedback page to both standalone and Phonk builds. Destination is configured locally or via SerenityFeedbackWebhook, outside profile config and public source. Submit includes explicit draft plus game name, Place ID, Job ID and UI version; no automatic reports. Status distinguishes success/failure, drafts survive failure, requests have a 30-second local cooldown, and mentions are disabled. No live request was sent. Mock checks cover setup-without-send, HTTP 204 success, payload context and cooldown.
+
+Pinned About profile outside its scroller; added interaction-only icon selection scale and truthful integration release text. Low Effects remains available. A public, preconfigured reporting service for all users still requires a server-side relay so the Discord credential is not shipped in client code. The preview uses per-device destination setup.
