@@ -38,3 +38,9 @@ The current mobile renderer and production V3 bridge are outside this desktop pr
 Added original implementations of completion-driven popup fades, short popup entry movement, sub-tab movement, animated navigation colors and section arrows, and button hover/press outlines. No third-party code copied. Runtime disconnects completion handlers on interruption and teardown. Popup replacement cancels descendant tweens before destruction.
 
 Syntax and mocked lifecycle suite pass, including delayed completion after popup close/reopen and destruction during an exit. These tests do not measure rendering quality, CanvasGroup texture behavior, or frame rate; a Roblox recording remains required.
+
+## Responsive and readability revision
+
+Corrected section height conversion from scaled AbsoluteContentSize to logical offsets, and scaled search-scroll targeting. Added 22 px navigation icons, 44–48 px common rows, larger toggles, scrolling sub-tabs, responsive card stacking and compact phone navigation. Touch sliders restore page scrolling on release/cancellation. Low Effects removes popup CanvasGroups and motion, with no new frame loop.
+
+Mock checks pass for 390×760 portrait, 844×350 landscape and 360×640 portrait: shell bounds, scale 1, touch rows, card stacking, lightweight popup class, and complete cleanup. A controlled 90% scale measurement verifies section sizing. Prior callback, state and popup-interruption checks still pass. No on-device performance claim or rendered mobile screenshot is available.

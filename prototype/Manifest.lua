@@ -62,6 +62,7 @@ return {
                 {Id='Accent',Type='Select',Title='Accent Color',Options={'Rose','Cyan','Lavender'},Default='Rose',Effect='Accent'},
                 {Id='Scale',Type='Slider',Title='UI Scale',Min=75,Max=115,Step=5,Default=100,Suffix='%',Effect='Scale'},
                 {Id='Transparency',Type='Slider',Title='Transparency',Min=0,Max=20,Step=1,Default=0,Suffix='%',Effect='Transparency'},
+                {Id='LowEffects',Type='Switch',Title='Low Effects',Default=false,Effect='LowEffects'},
                 {Id='ReducedMotion',Type='Switch',Title='Reduce Motion',Default=false,Effect='Motion'},
             }},
             {Id='Interface',Title='Interface',Tab='Interface',Expanded=true,Controls={

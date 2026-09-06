@@ -1,10 +1,10 @@
 return function(ui,popup)
     return function(parent,props,multiple)
         local row,label=ui:Row(parent,props.Title,42)
-        local button=ui:Button(row,'',{Position=UDim2.new(0.5,0,0.5,-14),Size=UDim2.new(0.5,-12,0,28)})
+        local button=ui:Button(row,'',{Position=UDim2.new(0.5,0,0.5,-22),Size=UDim2.new(0.5,-12,0,44)})
         ui:Stroke(button,nil,0.65)
         local summary=ui:Label(button,'',11,UDim2.fromOffset(9,0),UDim2.new(1,-31,1,0),ui.T.Muted)
-        ui:Icon(button,'chevron-down',12,UDim2.new(1,-22,0.5,-6))
+        ui:Icon(button,'chevron-down',18,UDim2.new(1,-26,0.5,-9))
         local self={Frame=row,Enabled=props.Enabled~=false,Options=props.Options or {},Value=multiple and {} or nil,Callback=props.Callback}
         local function same(a,b)
             if type(a)~='table' then return a==b end
@@ -64,7 +64,7 @@ return function(ui,popup)
                     for _,v in ipairs(self.Value) do if v==option then return true end end
                     return false
                 end
-                local item=ui:Button(scroll,'',{Size=UDim2.new(1,-4,0,30)})
+                local item=ui:Button(scroll,'',{Size=UDim2.new(1,-4,0,44)})
                 local tick=ui:Icon(item,'check',13,UDim2.fromOffset(9,9),ui.T.Accent)
                 ui:Label(item,option,11,UDim2.fromOffset(30,0),UDim2.new(1,-38,1,0))
                 local function render() tick.Visible=selected(); item.BackgroundTransparency=selected() and 0 or 0.65 end

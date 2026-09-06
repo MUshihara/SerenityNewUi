@@ -40,3 +40,13 @@ This is an isolated prototype, not a drop-in replacement for the production V3 r
 ## Validation
 
 See `VALIDATION.md` for the exact checks performed and limits. No claim of live Roblox visual or performance verification is made until the user runs the prototype and returns screenshots.
+
+## Responsive preview revision
+
+Navigation icons are 22 px, with larger labels, section chevrons and switches. Touch devices use a compact labelled icon sidebar, unscaled controls, scrolling sub-tabs and stacked About cards in narrow windows. Desktop windows under 700 px also use the compact layout. Rotation and viewport resizing recompute the layout. Mobile uses automatic sizing instead of the desktop UI Scale setting.
+
+Settings → Appearance → Low Effects disables motion, hover feedback and the shadow; popups use ordinary Frames instead of CanvasGroups. Enabled by default for touch devices when no preference was saved. Pictures remain available. Reduce Motion separately retains the visual styling.
+
+Optional loader overrides: `SerenityConceptOptions.Mobile = true` previews the touch layout; `SerenityConceptOptions.LowEffects = true` forces the low-effects preference at launch. Existing image and Discord options still work.
+
+Real phone keyboard behavior, notches, thumb reach and FPS still require device testing.

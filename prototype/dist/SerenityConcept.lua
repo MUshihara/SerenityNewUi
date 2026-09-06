@@ -401,7 +401,7 @@ end)()
 -- MODULE: core/UI.lua
 M.UI = (function()
 return function(theme, runtime, icons)
-    local UI={T=theme,R=runtime,AccentBindings={},Reduced=false}
+    local UI={T=theme,R=runtime,AccentBindings={},Reduced=false,ScaleFactor=1,LayoutCallbacks={}}
     function UI:New(kind,parent,props)
         local object=Instance.new(kind)
         for key,value in pairs(props or {}) do object[key]=value end
@@ -436,7 +436,7 @@ return function(theme, runtime, icons)
         self:Round(b,7)
         local feedback=self:New('UIStroke',b,{Color=theme.Text,Thickness=1,Transparency=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border})
         local hovering=false
-        local function highlight(value) if not runtime.Destroyed then self:Tween(feedback,0.1,{Transparency=value}) end end
+        local function highlight(value) if not runtime.Destroyed and not self.Touch and not self.LowEffects then self:Tween(feedback,0.1,{Transparency=value}) end end
         b.MouseEnter:Connect(function() hovering=true; highlight(0.78) end)
         b.MouseLeave:Connect(function() hovering=false; highlight(1) end)
         b.InputBegan:Connect(function(event)
@@ -463,10 +463,10 @@ return function(theme, runtime, icons)
         theme.Accent=color
         for _,fn in ipairs(self.AccentBindings) do fn(color) end
     end
-    function UI:Tween(object,time,props,completed) return runtime:Tween(object,time,props,self.Reduced,completed) end
+    function UI:Tween(object,time,props,completed) return runtime:Tween(object,time,props,self.Reduced or self.LowEffects,completed) end
     function UI:Row(parent,title,height)
-        local row=self:Frame(parent,{Size=UDim2.new(1,0,0,height or 40)})
-        local label=self:Label(row,title,12,UDim2.fromOffset(12,0),UDim2.new(0.5,-18,1,0))
+        local row=self:Frame(parent,{Size=UDim2.new(1,0,0,math.max(height or 44,self.Touch and 48 or 44))})
+        local label=self:Label(row,title,13,UDim2.fromOffset(12,0),UDim2.new(0.5,-18,1,0))
         self:Frame(row,{Position=UDim2.new(0,12,1,-1),Size=UDim2.new(1,-24,0,1),BackgroundColor3=theme.Line,BackgroundTransparency=0.65})
         return row,label
     end
@@ -479,8 +479,12 @@ M.Input = (function()
 return function(runtime)
     local service=game:GetService('UserInputService')
     local input={Drag=nil,Shortcuts={},Service=service}
-    function input:Cancel() self.Drag=nil end
+    function input:Cancel()
+        local drag=self.Drag; self.Drag=nil
+        if drag and drag.Finish then drag.Finish() end
+    end
     function input:Capture(source,onMove,onEnd)
+        self:Cancel()
         self.Drag={Source=source,Move=onMove,Finish=onEnd}; onMove(source.Position)
     end
     runtime:Connect(service.InputChanged,function(event)
@@ -497,6 +501,7 @@ return function(runtime)
         if (processed or service:GetFocusedTextBox()) and event.KeyCode~=Enum.KeyCode.Escape then return end
         for _,fn in ipairs(input.Shortcuts) do if fn(event,service) then break end end
     end)
+    runtime:OnDestroy(function() input:Cancel() end)
     return input
 end
 end)()
@@ -553,7 +558,7 @@ return function(ui,input,screen,getScale)
         if focused and root and focused:IsDescendantOf(root) then focused:ReleaseFocus() end
         self.Active=nil; self.Owner=nil; self.Panel=nil
         if not root then return end
-        if instant or ui.R.Destroyed or ui.Reduced then self:Discard(root); return end
+        if instant or ui.R.Destroyed or ui.Reduced or ui.LowEffects then self:Discard(root); return end
         self.Closing=root
         ui:Tween(panel,0.12,{GroupTransparency=1},function()
             if self.Closing==root then self.Closing=nil; self:Discard(root) end
@@ -575,13 +580,16 @@ return function(ui,input,screen,getScale)
         end
         x=math.clamp(x,10,math.max(10,view.X-width*scale-10))
         y=math.clamp(y,10,math.max(10,view.Y-height*scale-10))
-        local panel=ui:New('CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,GroupTransparency=ui.Reduced and 0 or 1,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
+        local panel=ui:New(ui.LowEffects and 'Frame' or 'CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
         ui:New('UIScale',panel,{Scale=scale})
         panel.BackgroundColor3=Color3.fromRGB(19,19,24)
         ui:Round(panel,10)
         self.Panel=panel
         panel.Position=UDim2.fromOffset(x,y+(ui.Reduced and 0 or 6))
-        ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
+        if not ui.LowEffects then
+            panel.GroupTransparency=ui.Reduced and 0 or 1
+            ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
+        else panel.Position=UDim2.fromOffset(x,y) end
         return panel
     end
     function Popup:Message(title,message,link)
@@ -605,16 +613,16 @@ end)()
 -- MODULE: components/Section.lua
 M.Section = (function()
 return function(ui,parent,title,open,onOpen)
-    local root=ui:Panel(parent,{Size=UDim2.new(1,0,0,34),ClipsDescendants=true})
-    local head=ui:Button(root,'',{Size=UDim2.new(1,0,0,34),BackgroundTransparency=1})
-    ui:Label(head,string.upper(title),10,UDim2.fromOffset(12,0),UDim2.new(1,-45,1,0),ui.T.Muted)
-    local caret=ui:Icon(head,'chevron-down',13,UDim2.new(1,-26,0,10))
-    local body=ui:Frame(root,{Position=UDim2.fromOffset(0,34),Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y})
+    local root=ui:Panel(parent,{Size=UDim2.new(1,0,0,44),ClipsDescendants=true})
+    local head=ui:Button(root,'',{Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
+    ui:Label(head,string.upper(title),11,UDim2.fromOffset(12,0),UDim2.new(1,-45,1,0),ui.T.Muted)
+    local caret=ui:Icon(head,'chevron-down',18,UDim2.new(1,-30,0,13))
+    local body=ui:Frame(root,{Position=UDim2.fromOffset(0,44),Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y})
     local list=ui:List(body,0)
     local section={Frame=root,Body=body,Open=open~=false,Revision=0}
     local function size(animate)
         ui:Tween(caret,animate and 0.18 or 0,{Rotation=section.Open and 180 or 0})
-        local target=34+(section.Open and (list.AbsoluteContentSize.Y+5) or 0)
+        local target=44+(section.Open and (list.AbsoluteContentSize.Y/math.max(0.2,ui.ScaleFactor)+5) or 0)
         ui:Tween(root,animate and 0.18 or 0,{Size=UDim2.new(1,0,0,target)})
     end
     function section:SetOpen(value,instant)
@@ -623,6 +631,7 @@ return function(ui,parent,title,open,onOpen)
     end
     ui.R:Connect(head.Activated,function() section:SetOpen(not section.Open) end)
     ui.R:Connect(list:GetPropertyChangedSignal('AbsoluteContentSize'),function() size(false) end)
+    table.insert(ui.LayoutCallbacks,function() size(false) end)
     size(false)
     return section
 end
@@ -637,9 +646,9 @@ return function(ui,input,popup)
     end
     function Controls.Switch(parent,props)
         local row,label=ui:Row(parent,props.Title)
-        local track=ui:Frame(row,{Size=UDim2.fromOffset(34,19),Position=UDim2.new(1,-46,0.5,-9.5),BackgroundTransparency=0})
+        local track=ui:Frame(row,{Size=UDim2.fromOffset(42,24),Position=UDim2.new(1,-54,0.5,-12),BackgroundTransparency=0})
         ui:Round(track,12)
-        local dot=ui:Frame(track,{Size=UDim2.fromOffset(13,13),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0})
+        local dot=ui:Frame(track,{Size=UDim2.fromOffset(18,18),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0})
         ui:Round(dot,10)
         local control={Frame=row,Value=props.Default==true,Enabled=props.Enabled~=false,Callback=props.Callback}
         function control:Get() return self.Value end
@@ -647,7 +656,7 @@ return function(ui,input,popup)
             track.BackgroundColor3=self.Value and ui.T.Accent or Color3.fromRGB(57,57,68)
             label.TextColor3=self.Enabled and ui.T.Text or ui.T.Dim
             dot.BackgroundTransparency=self.Enabled and 0 or 0.5
-            ui:Tween(dot,animate and 0.12 or 0,{Position=UDim2.fromOffset(self.Value and 18 or 3,3)})
+            ui:Tween(dot,animate and 0.12 or 0,{Position=UDim2.fromOffset(self.Value and 21 or 3,3)})
         end
         function control:Set(value,silent)
             local old=self.Value; self.Value=value==true; self:Render(true)
@@ -666,7 +675,7 @@ return function(ui,input,popup)
         local bar=ui:Frame(row,{Position=UDim2.fromOffset(12,43),Size=UDim2.new(1,-24,0,5),BackgroundColor3=Color3.fromRGB(42,42,51),BackgroundTransparency=0})
         ui:Round(bar,4)
         local fill=ui:Frame(bar,{Size=UDim2.fromScale(0,1),BackgroundTransparency=0}); ui:Round(fill,4)
-        local dot=ui:Frame(bar,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(11,11),BackgroundColor3=ui.T.Text,BackgroundTransparency=0}); ui:Round(dot,8)
+        local dot=ui:Frame(bar,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(14,14),BackgroundColor3=ui.T.Text,BackgroundTransparency=0}); ui:Round(dot,8)
         local hit=ui:Button(row,'',{Position=UDim2.fromOffset(6,31),Size=UDim2.new(1,-12,0,28),BackgroundTransparency=1})
         local min,max,step=props.Min or 0,props.Max or 100,props.Step or 1
         assert(max>min and step>0,'Invalid slider bounds')
@@ -685,10 +694,15 @@ return function(ui,input,popup)
         function control:SetEnabled(value) self.Enabled=value==true; box.TextEditable=self.Enabled; self:Render() end
         ui.R:Connect(hit.InputBegan,function(event)
             if control.Enabled and (event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch) then
+                input:Cancel()
+                local ancestor=row.Parent
+                while ancestor and not ancestor:IsA('ScrollingFrame') do ancestor=ancestor.Parent end
+                local scrollEnabled=ancestor and ancestor.ScrollingEnabled
+                if ancestor then ancestor.ScrollingEnabled=false end
                 input:Capture(event,function(pos)
                     local a=math.clamp((pos.X-bar.AbsolutePosition.X)/math.max(1,bar.AbsoluteSize.X),0,1)
                     control:Set(min+a*(max-min))
-                end)
+                end,function() if ancestor and ancestor.Parent then ancestor.ScrollingEnabled=scrollEnabled end end)
             end
         end)
         ui.R:Connect(box.FocusLost,function() if control.Enabled then control:Set(box.Text:match('[-+]?%d*%.?%d+')) else control:Render() end end)
@@ -762,10 +776,10 @@ M.Choice = (function()
 return function(ui,popup)
     return function(parent,props,multiple)
         local row,label=ui:Row(parent,props.Title,42)
-        local button=ui:Button(row,'',{Position=UDim2.new(0.5,0,0.5,-14),Size=UDim2.new(0.5,-12,0,28)})
+        local button=ui:Button(row,'',{Position=UDim2.new(0.5,0,0.5,-22),Size=UDim2.new(0.5,-12,0,44)})
         ui:Stroke(button,nil,0.65)
         local summary=ui:Label(button,'',11,UDim2.fromOffset(9,0),UDim2.new(1,-31,1,0),ui.T.Muted)
-        ui:Icon(button,'chevron-down',12,UDim2.new(1,-22,0.5,-6))
+        ui:Icon(button,'chevron-down',18,UDim2.new(1,-26,0.5,-9))
         local self={Frame=row,Enabled=props.Enabled~=false,Options=props.Options or {},Value=multiple and {} or nil,Callback=props.Callback}
         local function same(a,b)
             if type(a)~='table' then return a==b end
@@ -825,7 +839,7 @@ return function(ui,popup)
                     for _,v in ipairs(self.Value) do if v==option then return true end end
                     return false
                 end
-                local item=ui:Button(scroll,'',{Size=UDim2.new(1,-4,0,30)})
+                local item=ui:Button(scroll,'',{Size=UDim2.new(1,-4,0,44)})
                 local tick=ui:Icon(item,'check',13,UDim2.fromOffset(9,9),ui.T.Accent)
                 ui:Label(item,option,11,UDim2.fromOffset(30,0),UDim2.new(1,-38,1,0))
                 local function render() tick.Visible=selected(); item.BackgroundTransparency=selected() and 0 or 0.65 end
@@ -868,18 +882,18 @@ return function(ui,input,state,options)
     local parent=options.Parent
     if not parent and type(gethui)=='function' then pcall(function() parent=gethui() end) end
     if not parent then parent=game:GetService('Players').LocalPlayer:WaitForChild('PlayerGui') end
-    local screen=ui.R:Own(ui:New('ScreenGui',parent,{Name='SerenityConcept02',ResetOnSpawn=false,IgnoreGuiInset=true,DisplayOrder=999999,ZIndexBehavior=Enum.ZIndexBehavior.Sibling}))
+    local screen=ui.R:Own(ui:New('ScreenGui',parent,{Name='SerenityConcept02',ResetOnSpawn=false,IgnoreGuiInset=false,DisplayOrder=999999,ZIndexBehavior=Enum.ZIndexBehavior.Sibling}))
     local holder=ui:Frame(screen,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(T.Width,T.Height)})
     local scale=ui:New('UIScale',holder,{Scale=1})
     local shadow=ui:New('ImageLabel',holder,{BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),
         Size=UDim2.new(1,38,1,38),Image='rbxassetid://1316045217',ImageColor3=Color3.new(0,0,0),ImageTransparency=0.42,
         ScaleType=Enum.ScaleType.Slice,SliceCenter=Rect.new(10,10,118,118),ZIndex=1})
     local shell=ui:Panel(holder,{Size=UDim2.fromScale(1,1),BackgroundColor3=T.Shell,ZIndex=2})
-    ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar,14),Size=UDim2.new(0,1,1,-28),BackgroundColor3=T.Line,BackgroundTransparency=0.1})
+    local divider=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar,14),Size=UDim2.new(0,1,1,-28),BackgroundColor3=T.Line,BackgroundTransparency=0.1})
     local logo='rbxthumb://type=Asset&id=89023606689629&w=420&h=420'
     local brand=ui:Frame(shell,{Size=UDim2.fromOffset(T.Sidebar,T.Header),Active=true})
     ui:New('ImageLabel',brand,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(15,18),Size=UDim2.fromOffset(28,28),ScaleType=Enum.ScaleType.Fit})
-    ui:Label(brand,'SERENITY HUB',13,UDim2.fromOffset(53,17),UDim2.new(1,-59,0,19),nil,true)
+    local brandTitle=ui:Label(brand,'SERENITY HUB',13,UDim2.fromOffset(53,17),UDim2.new(1,-59,0,19),nil,true)
     local subtitle=ui:Label(brand,'UI Playground',10,UDim2.fromOffset(53,38),UDim2.new(1,-59,0,15),T.Muted)
     local navigation=ui:New('ScrollingFrame',shell,{BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(14,76),Size=UDim2.new(0,T.Sidebar-27,1,-149),
         CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=0})
@@ -893,24 +907,53 @@ return function(ui,input,state,options)
     local header=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,0),Size=UDim2.new(1,-T.Sidebar-32,0,T.Header),Active=true})
     local title=ui:Label(header,'About',16,UDim2.fromOffset(0,16),UDim2.new(1,-175,0,23),nil,true)
     local description=ui:Label(header,'Welcome to Serenity',10,UDim2.fromOffset(0,39),UDim2.new(1,-175,0,16),T.Muted)
-    local badge=ui:Panel(header,{Position=UDim2.new(1,-153,0,19),Size=UDim2.fromOffset(80,26),BackgroundColor3=T.Shell})
+    local badge=ui:Panel(header,{Position=UDim2.new(1,-172,0,19),Size=UDim2.fromOffset(80,26),BackgroundColor3=T.Shell})
     local badgeText=ui:Label(badge,'Preview',10); badgeText.TextXAlignment=Enum.TextXAlignment.Center
-    local search=ui:Button(header,'',{Position=UDim2.new(1,-65,0,18),Size=UDim2.fromOffset(28,28),BackgroundTransparency=1})
-    ui:Icon(search,'search',17,UDim2.fromOffset(5,5),T.Text)
-    local minimize=ui:Button(header,'',{Position=UDim2.new(1,-29,0,18),Size=UDim2.fromOffset(28,28),BackgroundTransparency=1})
-    ui:Icon(minimize,'minus',18,UDim2.fromOffset(5,5),T.Muted)
+    local search=ui:Button(header,'',{Position=UDim2.new(1,-84,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
+    ui:Icon(search,'search',22,UDim2.fromOffset(9,9),T.Text)
+    local minimize=ui:Button(header,'',{Position=UDim2.new(1,-40,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
+    ui:Icon(minimize,'minus',22,UDim2.fromOffset(9,9),T.Muted)
     local content=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,T.Header+9),Size=UDim2.new(1,-T.Sidebar-32,1,-T.Header-23)})
     local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(43,43),Visible=false,BackgroundColor3=T.Panel,ZIndex=4})
     ui:Stroke(launcher); ui:New('ImageLabel',launcher,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(9,9),Size=UDim2.fromOffset(25,25)})
-    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle}
+    local app={Screen=screen,Holder=holder,Shell=shell,Content=content,Scale=scale,Pages={},Current=nil,SearchButton=search,Visible=true,GameTitle=gameTitle,Subtitle=subtitle,LayoutWidth=T.Width,LayoutHeight=T.Height,SidebarWidth=T.Sidebar}
     function app:Fit()
         local view=screen.AbsoluteSize
         if view.X<10 or view.Y<10 then return end
         local desired=tonumber(state:Get('Settings.Appearance.Scale',100)) or 100
-        scale.Scale=math.max(0.2,math.min(desired/100,(view.X-24)/T.Width,(view.Y-24)/T.Height))
-        local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,T.Width*scale.Scale/2+12,math.max(T.Width*scale.Scale/2+12,view.X-T.Width*scale.Scale/2-12))
-        local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,T.Height*scale.Scale/2+12,math.max(T.Height*scale.Scale/2+12,view.Y-T.Height*scale.Scale/2-12))
+        local compact=ui.Touch or view.X<700
+        local width=compact and math.min(780,view.X-24) or T.Width
+        local height=compact and math.min(600,view.Y-24) or T.Height
+        local sidebar=compact and 68 or T.Sidebar
+        self.LayoutWidth=width; self.LayoutHeight=height; self.SidebarWidth=sidebar
+        holder.Size=UDim2.fromOffset(width,height)
+        scale.Scale=compact and 1 or math.max(0.2,math.min(desired/100,(view.X-24)/width,(view.Y-24)/height))
+        ui.ScaleFactor=scale.Scale
+        divider.Position=UDim2.fromOffset(sidebar,14)
+        brand.Size=UDim2.fromOffset(sidebar,T.Header); brandTitle.Visible=not compact; subtitle.Visible=not compact
+        navigation.Size=UDim2.new(0,sidebar-20,1,compact and -137 or -149)
+        navigation.Position=UDim2.fromOffset(10,70)
+        gameCard.Size=UDim2.fromOffset(sidebar-16,53); gameCard.Position=UDim2.new(0,8,1,-61)
+        gameTitle.Visible=not compact; dot.Visible=not compact
+        for _,child in ipairs(gameCard:GetChildren()) do if child:IsA('TextLabel') then child.Visible=not compact end end
+        header.Position=UDim2.fromOffset(sidebar+12,0); header.Size=UDim2.new(1,-sidebar-24,0,T.Header)
+        badge.Visible=not compact
+        title.Size=UDim2.new(1,compact and -88 or -175,0,23)
+        description.Size=UDim2.new(1,compact and -88 or -175,0,16)
+        content.Position=UDim2.fromOffset(sidebar+12,T.Header+9); content.Size=UDim2.new(1,-sidebar-24,1,-T.Header-23)
+        for _,entry in pairs(self.Pages) do
+            entry.Row.Size=UDim2.new(1,0,0,compact and 56 or 44)
+            entry.Tile.Position=UDim2.fromOffset(compact and 7 or 0,compact and 0 or 5)
+            entry.Label.TextSize=compact and 9 or 13
+            entry.Label.TextXAlignment=compact and Enum.TextXAlignment.Center or Enum.TextXAlignment.Left
+            entry.Label.Position=compact and UDim2.fromOffset(-3,35) or UDim2.fromOffset(44,0)
+            entry.Label.Size=compact and UDim2.new(1,6,0,18) or UDim2.new(1,-48,1,0)
+        end
+        shadow.Visible=not ui.LowEffects
+        local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,width*scale.Scale/2+12,math.max(width*scale.Scale/2+12,view.X-width*scale.Scale/2-12))
+        local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,height*scale.Scale/2+12,math.max(height*scale.Scale/2+12,view.Y-height*scale.Scale/2-12))
         holder.Position=UDim2.fromOffset(x,y)
+        for _,callback in ipairs(ui.LayoutCallbacks) do callback() end
         if self.Popup then self.Popup:Close(true) end
     end
     function app:SetVisible(value)
@@ -918,12 +961,12 @@ return function(ui,input,state,options)
         holder.Visible=self.Visible; launcher.Visible=not self.Visible
     end
     function app:AddPage(spec)
-        local row=ui:Button(navigation,'',{Name=spec.Id,Size=UDim2.new(1,0,0,33),BackgroundTransparency=1})
-        local tile=ui:Frame(row,{Size=UDim2.fromOffset(26,26),Position=UDim2.fromOffset(0,3),BackgroundColor3=T.Inset,BackgroundTransparency=0}); ui:Round(tile,7)
-        local icon=ui:Icon(tile,spec.Icon,15,UDim2.fromOffset(5.5,5.5),T.Muted)
-        local navText=ui:Label(row,spec.Title,11,UDim2.fromOffset(36,0),UDim2.new(1,-40,1,0))
+        local row=ui:Button(navigation,'',{Name=spec.Id,Size=UDim2.new(1,0,0,44),BackgroundTransparency=1})
+        local tile=ui:Frame(row,{Size=UDim2.fromOffset(34,34),Position=UDim2.fromOffset(0,3),BackgroundColor3=T.Inset,BackgroundTransparency=0}); ui:Round(tile,7)
+        local icon=ui:Icon(tile,spec.Icon,22,UDim2.fromOffset(6,6),T.Muted)
+        local navText=ui:Label(row,spec.Title,13,UDim2.fromOffset(44,0),UDim2.new(1,-40,1,0))
         local page=ui:Frame(content,{Size=UDim2.fromScale(1,1),Visible=false})
-        local entry={Frame=page,Spec=spec,Tile=tile,Icon=icon,Label=navText}
+        local entry={Row=row,Frame=page,Spec=spec,Tile=tile,Icon=icon,Label=navText}
         self.Pages[spec.Id]=entry
         row.Activated:Connect(function() self:SelectPage(spec.Id) end)
         ui:Accent(function(color)
@@ -951,7 +994,7 @@ return function(ui,input,state,options)
             if event.UserInputType~=Enum.UserInputType.MouseButton1 and event.UserInputType~=Enum.UserInputType.Touch then return end
             local start=event.Position; local center=Vector2.new(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2)
             input:Capture(event,function(pos)
-                local view=screen.AbsoluteSize; local half=Vector2.new(T.Width*scale.Scale/2,T.Height*scale.Scale/2)
+                local view=screen.AbsoluteSize; local half=Vector2.new(app.LayoutWidth*scale.Scale/2,app.LayoutHeight*scale.Scale/2)
                 holder.Position=UDim2.fromOffset(math.clamp(center.X+pos.X-start.X,half.X+8,math.max(half.X+8,view.X-half.X-8)),math.clamp(center.Y+pos.Y-start.Y,half.Y+8,math.max(half.Y+8,view.Y-half.Y-8)))
             end)
         end)
@@ -1038,6 +1081,7 @@ return {
                 {Id='Accent',Type='Select',Title='Accent Color',Options={'Rose','Cyan','Lavender'},Default='Rose',Effect='Accent'},
                 {Id='Scale',Type='Slider',Title='UI Scale',Min=75,Max=115,Step=5,Default=100,Suffix='%',Effect='Scale'},
                 {Id='Transparency',Type='Slider',Title='Transparency',Min=0,Max=20,Step=1,Default=0,Suffix='%',Effect='Transparency'},
+                {Id='LowEffects',Type='Switch',Title='Low Effects',Default=false,Effect='LowEffects'},
                 {Id='ReducedMotion',Type='Switch',Title='Reduce Motion',Default=false,Effect='Motion'},
             }},
             {Id='Interface',Title='Interface',Tab='Interface',Expanded=true,Controls={
@@ -1073,9 +1117,14 @@ return function(M,options)
             end
         end
     end
+    defaults['Settings.Appearance.LowEffects']=options.LowEffects==true or options.Mobile==true or game:GetService('UserInputService').TouchEnabled==true
     local state=M.State.new(defaults,runtime)
+    if options.LowEffects~=nil then state:Set('Settings.Appearance.LowEffects',options.LowEffects==true) end
     local ui=M.UI(M.Theme,runtime,M.Icons)
     local input=M.Input(runtime)
+    ui.Touch=options.Mobile==true or input.Service.TouchEnabled==true
+    ui.LowEffects=state:Get('Settings.Appearance.LowEffects',ui.Touch)==true
+    if options.LowEffects~=nil then ui.LowEffects=options.LowEffects==true end
     local app
     local ok,err=xpcall(function()
         app=M.Renderer(ui,input,state,options)
@@ -1092,7 +1141,8 @@ return function(M,options)
                 ui:SetAccent(colors[value] or colors.Rose)
             elseif effect=='Scale' then self:Fit()
             elseif effect=='Transparency' then self.Shell.BackgroundTransparency=math.clamp(tonumber(value) or 0,0,20)/100
-            elseif effect=='Motion' then ui.Reduced=value==true end
+            elseif effect=='Motion' then ui.Reduced=value==true
+            elseif effect=='LowEffects' then ui.LowEffects=value==true; popup:Close(true); self:Fit() end
         end
         function app:Copy(text,title)
             if type(setclipboard)=='function' then
@@ -1137,6 +1187,7 @@ return function(M,options)
             ui:Label(frame,title,13,UDim2.fromOffset(12,174),UDim2.new(1,-24,0,24),nil,true)
             ui:Label(frame,description,10,UDim2.fromOffset(12,201),UDim2.new(1,-24,0,21),ui.T.Muted)
             local b=ui:Button(frame,buttonText,{Position=UDim2.fromOffset(12,235),Size=UDim2.new(1,-24,0,32)},callback); ui:Stroke(b,nil,0.5)
+            return frame
         end
         for _,page in ipairs(manifest.Pages) do
             local pageFrame=app:AddPage(page)
@@ -1146,35 +1197,44 @@ return function(M,options)
                 local section=M.Section(ui,scroll,'What’s new',false,function() popup:Close() end)
                 controls.Paragraph(section.Body,{Title='Concept 02',Text='Compact navigation, image cards, working controls and saved preview settings.',Height=80})
                 local cards=ui:Frame(scroll,{Size=UDim2.new(1,0,0,280)})
-                card(cards,'Community',0,'Serenity Community','Meet the community','messages-square','Copy Discord Link',function() app:Copy(options.DiscordInvite,'Discord invite') end)
-                card(cards,'Updates',0.5,'Release Notes','See the latest changes','megaphone','View Changelog',function()
+                local community=card(cards,'Community',0,'Serenity Community','Meet the community','messages-square','Copy Discord Link',function() app:Copy(options.DiscordInvite,'Discord invite') end)
+                local updates=card(cards,'Updates',0.5,'Release Notes','See the latest changes','megaphone','View Changelog',function()
                     popup:Message('Concept 02 — preview','Added compact navigation, expandable sections, searchable selections, image cards, UI scale, accent colors, and isolated preview settings.\n\nGame automation is not connected.')
                 end)
+                app.AboutCards={Container=cards,Community=community,Updates=updates}
+                local function arrangeCards()
+                    local narrow=app.LayoutWidth-app.SidebarWidth-32<460
+                    cards.Size=UDim2.new(1,0,0,narrow and 572 or 280)
+                    community.Size=UDim2.new(narrow and 1 or 0.5,narrow and 0 or -6,0,280)
+                    updates.Size=community.Size
+                    updates.Position=narrow and UDim2.fromOffset(0,292) or UDim2.new(0.5,6,0,0)
+                end
+                table.insert(ui.LayoutCallbacks,arrangeCards); arrangeCards()
             else
                 local tabMap={}; local tabOrder=page.Tabs or {{Id='Main'}}
                 local tabBar
-                if page.Tabs then tabBar=ui:Frame(pageFrame,{Size=UDim2.new(1,0,0,32)}); ui:List(tabBar,7,true) end
+                if page.Tabs then tabBar=ui:New('ScrollingFrame',pageFrame,{Size=UDim2.new(1,0,0,44),BackgroundTransparency=1,BorderSizePixel=0,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.X,ScrollingDirection=Enum.ScrollingDirection.X,ScrollBarThickness=0}); ui:List(tabBar,7,true) end
                 local function selectTab(id)
                     if not tabMap[id] then return end
                     input:Cancel(); popup:Close(); state:Set('View.Tab.'..page.Id,id)
                     for key,tab in pairs(tabMap) do
                         tab.Scroll.Visible=key==id
                         if key==id then
-                            tab.Scroll.Position=UDim2.fromOffset(ui.Reduced and 0 or 5,tabBar and 42 or 0)
-                            ui:Tween(tab.Scroll,0.16,{Position=UDim2.fromOffset(0,tabBar and 42 or 0)})
+                            tab.Scroll.Position=UDim2.fromOffset(ui.Reduced and 0 or 5,tabBar and 52 or 0)
+                            ui:Tween(tab.Scroll,0.16,{Position=UDim2.fromOffset(0,tabBar and 52 or 0)})
                         end
                         if tab.Button then tab.Button.BackgroundColor3=key==id and ui.T.Accent or ui.T.Inset end
                     end
                 end
                 for _,spec in ipairs(tabOrder) do
-                    local scroll=scroller(pageFrame,tabBar and 42 or 0)
+                    local scroll=scroller(pageFrame,tabBar and 52 or 0)
                     local tab={Scroll=scroll}; tabMap[spec.Id]=tab
                     if tabBar then
-                        local width=math.max(76,#spec.Id*7+35)
-                        tab.Button=ui:Button(tabBar,'',{Size=UDim2.fromOffset(width,30)},function() selectTab(spec.Id) end)
+                        local width=math.max(76,#spec.Id*8+42)
+                        tab.Button=ui:Button(tabBar,'',{Size=UDim2.fromOffset(width,42)},function() selectTab(spec.Id) end)
                         ui:Stroke(tab.Button,nil,0.5)
-                        ui:Icon(tab.Button,spec.Icon or 'menu',12,UDim2.fromOffset(9,9),ui.T.Text)
-                        ui:Label(tab.Button,spec.Id,10,UDim2.fromOffset(27,0),UDim2.new(1,-32,1,0))
+                        ui:Icon(tab.Button,spec.Icon or 'menu',18,UDim2.fromOffset(10,12),ui.T.Text)
+                        ui:Label(tab.Button,spec.Id,12,UDim2.fromOffset(34,0),UDim2.new(1,-39,1,0))
                     end
                 end
                 app.Tabs[page.Id]={Select=selectTab,Items=tabMap}
@@ -1226,7 +1286,7 @@ return function(M,options)
                     task.defer(function()
                         if runtime.Destroyed or self.Current~=entry.Page then return end
                         if entry.Scroll then
-                            local y=entry.Target.AbsolutePosition.Y-entry.Scroll.AbsolutePosition.Y+entry.Scroll.CanvasPosition.Y-7
+                            local y=(entry.Target.AbsolutePosition.Y-entry.Scroll.AbsolutePosition.Y)/math.max(0.2,ui.ScaleFactor)+entry.Scroll.CanvasPosition.Y-7
                             entry.Scroll.CanvasPosition=Vector2.new(0,math.max(0,y))
                         end
                         local flash=ui:Stroke(entry.Target,ui.T.Accent,0.05)
@@ -1251,8 +1311,8 @@ return function(M,options)
         table.insert(input.Shortcuts,function(event,service)
             if event.KeyCode==Enum.KeyCode.K and (service:IsKeyDown(Enum.KeyCode.LeftControl) or service:IsKeyDown(Enum.KeyCode.RightControl)) then app:Search(); return true end
         end)
-        for _,effect in ipairs({'Motion','Accent','Transparency','Scale'}) do
-            local names={Motion='ReducedMotion',Accent='Accent',Transparency='Transparency',Scale='Scale'}
+        for _,effect in ipairs({'Motion','Accent','Transparency','Scale','LowEffects'}) do
+            local names={Motion='ReducedMotion',Accent='Accent',Transparency='Transparency',Scale='Scale',LowEffects='LowEffects'}
             app:ApplyEffect(effect,state:Get('Settings.Appearance.'..names[effect]))
         end
         app:SetLive('Server.Session.Place',game.PlaceId)

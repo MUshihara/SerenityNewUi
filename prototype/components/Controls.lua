@@ -5,9 +5,9 @@ return function(ui,input,popup)
     end
     function Controls.Switch(parent,props)
         local row,label=ui:Row(parent,props.Title)
-        local track=ui:Frame(row,{Size=UDim2.fromOffset(34,19),Position=UDim2.new(1,-46,0.5,-9.5),BackgroundTransparency=0})
+        local track=ui:Frame(row,{Size=UDim2.fromOffset(42,24),Position=UDim2.new(1,-54,0.5,-12),BackgroundTransparency=0})
         ui:Round(track,12)
-        local dot=ui:Frame(track,{Size=UDim2.fromOffset(13,13),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0})
+        local dot=ui:Frame(track,{Size=UDim2.fromOffset(18,18),BackgroundColor3=Color3.new(1,1,1),BackgroundTransparency=0})
         ui:Round(dot,10)
         local control={Frame=row,Value=props.Default==true,Enabled=props.Enabled~=false,Callback=props.Callback}
         function control:Get() return self.Value end
@@ -15,7 +15,7 @@ return function(ui,input,popup)
             track.BackgroundColor3=self.Value and ui.T.Accent or Color3.fromRGB(57,57,68)
             label.TextColor3=self.Enabled and ui.T.Text or ui.T.Dim
             dot.BackgroundTransparency=self.Enabled and 0 or 0.5
-            ui:Tween(dot,animate and 0.12 or 0,{Position=UDim2.fromOffset(self.Value and 18 or 3,3)})
+            ui:Tween(dot,animate and 0.12 or 0,{Position=UDim2.fromOffset(self.Value and 21 or 3,3)})
         end
         function control:Set(value,silent)
             local old=self.Value; self.Value=value==true; self:Render(true)
@@ -34,7 +34,7 @@ return function(ui,input,popup)
         local bar=ui:Frame(row,{Position=UDim2.fromOffset(12,43),Size=UDim2.new(1,-24,0,5),BackgroundColor3=Color3.fromRGB(42,42,51),BackgroundTransparency=0})
         ui:Round(bar,4)
         local fill=ui:Frame(bar,{Size=UDim2.fromScale(0,1),BackgroundTransparency=0}); ui:Round(fill,4)
-        local dot=ui:Frame(bar,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(11,11),BackgroundColor3=ui.T.Text,BackgroundTransparency=0}); ui:Round(dot,8)
+        local dot=ui:Frame(bar,{AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0,0.5),Size=UDim2.fromOffset(14,14),BackgroundColor3=ui.T.Text,BackgroundTransparency=0}); ui:Round(dot,8)
         local hit=ui:Button(row,'',{Position=UDim2.fromOffset(6,31),Size=UDim2.new(1,-12,0,28),BackgroundTransparency=1})
         local min,max,step=props.Min or 0,props.Max or 100,props.Step or 1
         assert(max>min and step>0,'Invalid slider bounds')
@@ -53,10 +53,15 @@ return function(ui,input,popup)
         function control:SetEnabled(value) self.Enabled=value==true; box.TextEditable=self.Enabled; self:Render() end
         ui.R:Connect(hit.InputBegan,function(event)
             if control.Enabled and (event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch) then
+                input:Cancel()
+                local ancestor=row.Parent
+                while ancestor and not ancestor:IsA('ScrollingFrame') do ancestor=ancestor.Parent end
+                local scrollEnabled=ancestor and ancestor.ScrollingEnabled
+                if ancestor then ancestor.ScrollingEnabled=false end
                 input:Capture(event,function(pos)
                     local a=math.clamp((pos.X-bar.AbsolutePosition.X)/math.max(1,bar.AbsoluteSize.X),0,1)
                     control:Set(min+a*(max-min))
-                end)
+                end,function() if ancestor and ancestor.Parent then ancestor.ScrollingEnabled=scrollEnabled end end)
             end
         end)
         ui.R:Connect(box.FocusLost,function() if control.Enabled then control:Set(box.Text:match('[-+]?%d*%.?%d+')) else control:Render() end end)

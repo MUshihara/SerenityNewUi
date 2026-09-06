@@ -16,7 +16,7 @@ return function(ui,input,screen,getScale)
         if focused and root and focused:IsDescendantOf(root) then focused:ReleaseFocus() end
         self.Active=nil; self.Owner=nil; self.Panel=nil
         if not root then return end
-        if instant or ui.R.Destroyed or ui.Reduced then self:Discard(root); return end
+        if instant or ui.R.Destroyed or ui.Reduced or ui.LowEffects then self:Discard(root); return end
         self.Closing=root
         ui:Tween(panel,0.12,{GroupTransparency=1},function()
             if self.Closing==root then self.Closing=nil; self:Discard(root) end
@@ -38,13 +38,16 @@ return function(ui,input,screen,getScale)
         end
         x=math.clamp(x,10,math.max(10,view.X-width*scale-10))
         y=math.clamp(y,10,math.max(10,view.Y-height*scale-10))
-        local panel=ui:New('CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,GroupTransparency=ui.Reduced and 0 or 1,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
+        local panel=ui:New(ui.LowEffects and 'Frame' or 'CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
         ui:New('UIScale',panel,{Scale=scale})
         panel.BackgroundColor3=Color3.fromRGB(19,19,24)
         ui:Round(panel,10)
         self.Panel=panel
         panel.Position=UDim2.fromOffset(x,y+(ui.Reduced and 0 or 6))
-        ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
+        if not ui.LowEffects then
+            panel.GroupTransparency=ui.Reduced and 0 or 1
+            ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
+        else panel.Position=UDim2.fromOffset(x,y) end
         return panel
     end
     function Popup:Message(title,message,link)
