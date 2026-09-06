@@ -1,0 +1,12 @@
+-- Demo target:
+--
+-- 1. create Runtime
+-- 2. load Tokens/Typography/Motion/Material
+-- 3. create popup/search/input managers
+-- 4. mount Desktop renderer
+-- 5. render demo Manifest
+--
+-- Keep this separate from production Serenity integration.
+--
+-- The next implementation pass should turn this into a complete
+-- interactive UI test after the repo is created.
