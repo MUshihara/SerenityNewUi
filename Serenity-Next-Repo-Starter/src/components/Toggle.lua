@@ -3,36 +3,38 @@ Toggle.__index = Toggle
 
 function Toggle.new(parent, deps, props)
     local tokens = deps.Tokens
+    props = props or {}
 
     local row = Instance.new("CanvasGroup")
+    row.Name = props.Id or "Toggle"
     row.Size = UDim2.new(1, 0, 0, tokens.Size.Control)
     row.Parent = parent
     deps.Material.Control(row, tokens)
 
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(14, 8)
-    title.Size = UDim2.new(1, -220, 0, 18)
-    title.Text = props.Title
-    title.TextColor3 = tokens.Color.Text
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = row
-    deps.Typography.Apply(title, "Control", tokens)
+    deps.Typography.Label(
+        row,
+        "Control",
+        tokens,
+        props.Title or "Toggle",
+        UDim2.fromOffset(14, 7),
+        UDim2.new(1, -120, 0, 19),
+        tokens.Color.Text
+    )
 
-    local desc = Instance.new("TextLabel")
-    desc.BackgroundTransparency = 1
-    desc.Position = UDim2.fromOffset(14, 28)
-    desc.Size = UDim2.new(1, -220, 0, 16)
-    desc.Text = props.Description or ""
-    desc.TextColor3 = tokens.Color.TextDim
-    desc.TextXAlignment = Enum.TextXAlignment.Left
-    desc.Parent = row
-    deps.Typography.Apply(desc, "Description", tokens)
+    deps.Typography.Label(
+        row,
+        "Description",
+        tokens,
+        props.Description or "",
+        UDim2.fromOffset(14, 28),
+        UDim2.new(1, -120, 0, 16),
+        tokens.Color.TextDim
+    )
 
     local switch = Instance.new("Frame")
     switch.AnchorPoint = Vector2.new(1, 0.5)
-    switch.Position = UDim2.new(1, -16, 0.5, 0)
-    switch.Size = UDim2.fromOffset(48, 26)
+    switch.Position = UDim2.new(1, -14, 0.5, 0)
+    switch.Size = UDim2.fromOffset(45, 25)
     switch.BorderSizePixel = 0
     switch.Parent = row
 
@@ -42,8 +44,8 @@ function Toggle.new(parent, deps, props)
 
     local knob = Instance.new("Frame")
     knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Size = UDim2.fromOffset(18, 18)
-    knob.BackgroundColor3 = Color3.fromRGB(247, 250, 255)
+    knob.Size = UDim2.fromOffset(17, 17)
+    knob.BackgroundColor3 = Color3.fromRGB(248, 251, 255)
     knob.BorderSizePixel = 0
     knob.Parent = switch
 
@@ -61,7 +63,7 @@ function Toggle.new(parent, deps, props)
     local self = setmetatable({
         Frame = row,
         Value = not not props.Default,
-        Enabled = true,
+        Enabled = props.Enabled ~= false,
         Switch = switch,
         Knob = knob,
         Callback = props.Callback,
@@ -69,8 +71,25 @@ function Toggle.new(parent, deps, props)
         Tokens = tokens,
     }, Toggle)
 
-    self:Set(self.Value, true)
+    function self:_render(animate)
+        self.Switch.BackgroundColor3 = self.Value and self.Tokens.Color.Accent or self.Tokens.Color.Disabled
+        local pos = self.Value and UDim2.new(1, -12.5, 0.5, 0) or UDim2.fromOffset(12.5, 12.5)
+        if animate then
+            self.Motion:Tween(self.Knob, "Toggle", {Position = pos})
+        else
+            self.Knob.Position = pos
+        end
+        self.Frame.GroupTransparency = self.Enabled and 0 or 0.42
+    end
 
+    self:_render(false)
+
+    hit.MouseEnter:Connect(function()
+        if self.Enabled then deps.Material.Hover(row, tokens, true) end
+    end)
+    hit.MouseLeave:Connect(function()
+        deps.Material.Hover(row, tokens, false)
+    end)
     hit.MouseButton1Click:Connect(function()
         if not self.Enabled then return end
         self:Set(not self.Value)
@@ -81,24 +100,13 @@ end
 
 function Toggle:Set(value, silent)
     self.Value = not not value
-
-    self.Switch.BackgroundColor3 =
-        self.Value and self.Tokens.Color.Accent or self.Tokens.Color.Stroke
-
-    self.Motion:Tween(self.Knob, "Toggle", {
-        Position = self.Value
-            and UDim2.new(1, -13, 0.5, 0)
-            or UDim2.fromOffset(13, 13),
-    })
-
-    if self.Callback and not silent then
-        self.Callback(self.Value)
-    end
+    self:_render(true)
+    if self.Callback and not silent then self.Callback(self.Value) end
 end
 
 function Toggle:SetEnabled(value)
     self.Enabled = not not value
-    self.Frame.GroupTransparency = self.Enabled and 0 or 0.42
+    self:_render(false)
 end
 
 return Toggle
