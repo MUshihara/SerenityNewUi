@@ -28,3 +28,7 @@ output=root/'dist/SerenityConcept.lua'
 output.parent.mkdir(exist_ok=True)
 output.write_text('\n'.join(parts))
 print(output.name, hashlib.sha256(output.read_bytes()).hexdigest())
+
+# Integration library returns Build without mounting the generic demo.
+bridge=(root/'PhonkBridge.lua').read_text()
+(root/'dist/SerenityPhonkUI.lua').write_text('\n'.join(parts[:-1])+'\n'+bridge)

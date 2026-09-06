@@ -2,7 +2,7 @@ return function(M,options)
     options=options or {}
     options.AssetBase=options.AssetBase or 'https://raw.githubusercontent.com/MUshihara/SerenityNewUi/77e5a1d2a4bc5e662bf52258a22b2976aedba1f8/prototype/assets/'
     options.DiscordInvite=options.DiscordInvite or 'https://discord.gg/ccsvkN7Pp'
-    local manifest=M.Manifest
+    local manifest=options.Manifest or M.Manifest
     assert(manifest.SerenityAPIVersion==3,'Expected V3 manifest')
     local runtime=M.Runtime.new()
     local defaults={['View.Page']='About'}
@@ -11,12 +11,23 @@ return function(M,options)
         for _,feature in ipairs(page.Features) do
             defaults['View.Section.'..page.Id..'.'..feature.Id]=feature.Expanded~=false
             for _,control in ipairs(feature.Controls) do
-                if control.Default~=nil then defaults[page.Id..'.'..feature.Id..'.'..control.Id]=control.Default end
+                if control.Default~=nil then defaults[(feature.ConfigPage or page.Id)..'.'..feature.Id..'.'..control.Id]=control.Default end
             end
         end
     end
     defaults['Settings.Appearance.LowEffects']=options.LowEffects==true or options.Mobile==true or game:GetService('UserInputService').TouchEnabled==true
-    local state=M.State.new(defaults,runtime)
+    local state=M.State.new(defaults,runtime,options.ConfigPath)
+    if options.Manifest then
+        for _,page in ipairs(manifest.Pages) do
+            if not page.SharedPreview then
+                for _,feature in ipairs(page.Features) do
+                    for _,control in ipairs(feature.Controls) do
+                        if control.Default~=nil then state.Data[(feature.ConfigPage or page.Id)..'.'..feature.Id..'.'..control.Id]=control.Default end
+                    end
+                end
+            end
+        end
+    end
     if options.LowEffects~=nil then state:Set('Settings.Appearance.LowEffects',options.LowEffects==true) end
     local ui=M.UI(M.Theme,runtime,M.Icons)
     local input=M.Input(runtime)
@@ -171,7 +182,7 @@ return function(M,options)
                 end)
                 for _,feature in ipairs(page.Features) do
                     local tabId=feature.Tab or 'Main'; local scroll=assert(tabMap[tabId],'Missing sub-tab').Scroll
-                    local sectionKey=page.Id..'.'..feature.Id
+                    local sectionKey=(feature.ConfigPage or page.Id)..'.'..feature.Id
                     local section=M.Section(ui,scroll,feature.Title,state:Get('View.Section.'..sectionKey,feature.Expanded~=false),function(open)
                         input:Cancel(); popup:Close(); state:Set('View.Section.'..sectionKey,open)
                     end)
@@ -181,8 +192,13 @@ return function(M,options)
                         local props={}; for k,v in pairs(spec) do props[k]=v end
                         if spec.Default~=nil then props.Default=state:Get(key,spec.Default) end
                         props.Callback=function(value)
-                            if spec.Type=='Action' then app:Action(spec.Action)
-                            else state:Set(key,value); if spec.Effect then app:ApplyEffect(spec.Effect,value) end end
+                            if spec.Type=='Action' then
+                                if spec.Callback then spec.Callback(app,app.Adapter) else app:Action(spec.Action) end
+                            else
+                                state:Set(key,value)
+                                if spec.Changed then spec.Changed(value,app,app.Adapter) end
+                                if spec.Effect then app:ApplyEffect(spec.Effect,value) end
+                            end
                         end
                         local control
                         if spec.Type=='Select' or spec.Type=='MultiSelect' then control=choice(section.Body,props,spec.Type=='MultiSelect')

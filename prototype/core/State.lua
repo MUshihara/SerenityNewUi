@@ -4,9 +4,9 @@ local function copy(v)
     if type(v)~='table' then return v end
     local out={}; for k,x in pairs(v) do out[k]=copy(x) end; return out
 end
-function State.new(defaults, runtime)
+function State.new(defaults, runtime, path)
     local self=setmetatable({Data=copy(defaults), Defaults=copy(defaults), Runtime=runtime, Revision=0,
-        Path='SerenityConcept02/settings-v1.json', FileAPI=type(readfile)=='function' and type(writefile)=='function' and type(isfile)=='function'},State)
+        Path=path or 'SerenityConcept02/settings-v1.json', FileAPI=type(readfile)=='function' and type(writefile)=='function' and type(isfile)=='function'},State)
     if self.FileAPI then
         local ok,decoded=pcall(function()
             if isfile(self.Path) then return game:GetService('HttpService'):JSONDecode(readfile(self.Path)) end

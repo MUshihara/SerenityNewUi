@@ -197,3 +197,27 @@ _G.SerenityConceptOptions=nil
 assert(activeConnections==0,'mobile cleanup leaked connections')
 print('PASS: scaled section measurement; portrait/landscape phone bounds; full-size touch rows; stacked cards; low-effects popup; mobile cleanup.')
 print('PASS: mount; isolated state; single callback; disabled toggle; slider bounds; copied multiselect; open-menu refresh; popup cleanup; Escape; hide/show; re-execute; config restoration; teardown.')
+
+-- Actual supplied Phonk manifest: no gameplay code is executed by this fixture.
+local base=('__BUNDLE_PATH__'):gsub('dist/SerenityConcept.lua$','')
+local manifest=dofile(base..'tests/PhonkManifest.lua')
+local bridge=dofile(base..'dist/SerenityPhonkUI.lua')
+local callbackCount=0
+setBool=function(key,value) assert(key=='AutoClick');callbackCount=callbackCount+1 end
+local phonk=bridge.Build(manifest);flushDeferred()
+assert(callbackCount==0,'construction activated Phonk')
+local count=0
+for _,page in ipairs(manifest.Pages)do for _,feature in ipairs(page.Features)do
+    for _,spec in ipairs(feature.Controls)do
+        if spec.Id then assert(phonk.Controls[page.Id..'.'..feature.Id..'.'..spec.Id],'missing Phonk control');count=count+1 end
+    end
+end end
+phonk.Controls['Automation.Farm.AutoClick']:Set(true)
+assert(callbackCount==1,'Changed callback was not called exactly once')
+local cleaned=false;phonk.Runtime:TrackCleanup(function() cleaned=true end)
+local nextPhonk=bridge.Build(manifest);flushDeferred()
+assert(cleaned and phonk.Runtime.Destroyed,'Phonk replacement missed cleanup')
+assert(nextPhonk.Controls['Automation.Farm.AutoClick']:Get()==false,'Phonk did not start OFF')
+assert(nextPhonk.Pages.GameTuning and nextPhonk.Pages.Settings,'game tuning and UI settings collided')
+nextPhonk:Destroy();assert(activeConnections==0,'Phonk UI connection leak')
+print('PASS: actual Phonk manifest controls '..count..'; callback wiring; OFF on restart; cleanup; settings separation.')

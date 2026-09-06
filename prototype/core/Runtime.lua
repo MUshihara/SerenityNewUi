@@ -14,6 +14,7 @@ function Runtime:Own(value)
     return value
 end
 function Runtime:OnDestroy(callback) self.Cleanups[#self.Cleanups+1]=callback end
+function Runtime:TrackCleanup(callback) self:OnDestroy(callback) end
 function Runtime:Connect(signal, callback)
     return self:Own(signal:Connect(function(...) if not self.Destroyed then callback(...) end end))
 end
