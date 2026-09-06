@@ -24,8 +24,8 @@ function Section.new(parent, deps, props)
         "Section",
         tokens,
         props.Title or "Section",
-        UDim2.fromOffset(14, 7),
-        UDim2.new(1, -150, 0, 20),
+        UDim2.fromOffset(13, 6),
+        UDim2.new(1, -150, 0, 19),
         tokens.Color.Text
     )
 
@@ -34,8 +34,8 @@ function Section.new(parent, deps, props)
         "Description",
         tokens,
         props.Description or "",
-        UDim2.fromOffset(14, 28),
-        UDim2.new(1, -150, 0, 17),
+        UDim2.fromOffset(13, 25),
+        UDim2.new(1, -150, 0, 16),
         tokens.Color.TextMuted
     )
 
@@ -43,10 +43,10 @@ function Section.new(parent, deps, props)
     if props.Status then
         status = Instance.new("TextLabel")
         status.AnchorPoint = Vector2.new(1, 0.5)
-        status.Position = UDim2.new(1, -39, 0.5, 0)
-        status.Size = UDim2.fromOffset(78, 24)
+        status.Position = UDim2.new(1, -37, 0.5, 0)
+        status.Size = UDim2.fromOffset(74, 22)
         status.BackgroundColor3 = tokens.Color.Inset
-        status.BackgroundTransparency = 0.08
+        status.BackgroundTransparency = 0.18
         status.BorderSizePixel = 0
         status.Text = props.Status
         status.TextColor3 = props.StatusColor or tokens.Color.TextMuted
@@ -57,18 +57,18 @@ function Section.new(parent, deps, props)
         c.Parent = status
         local s = Instance.new("UIStroke")
         s.Color = status.TextColor3
-        s.Transparency = 0.62
+        s.Transparency = 0.70
         s.Parent = status
     end
 
-    local caret = deps.Icons.Create(header, props.Open == false and "plus" or "minus", 15, tokens.Color.TextDim)
+    local caret = deps.Icons.Create(header, props.Open == false and "plus" or "minus", 14, tokens.Color.TextDim)
     caret.AnchorPoint = Vector2.new(1, 0.5)
-    caret.Position = UDim2.new(1, -12, 0.5, 0)
+    caret.Position = UDim2.new(1, -11, 0.5, 0)
 
     local body = Instance.new("Frame")
     body.BackgroundTransparency = 1
-    body.Position = UDim2.fromOffset(8, tokens.Size.SectionHeader + 1)
-    body.Size = UDim2.new(1, -16, 0, 0)
+    body.Position = UDim2.fromOffset(7, tokens.Size.SectionHeader + 1)
+    body.Size = UDim2.new(1, -14, 0, 0)
     body.AutomaticSize = Enum.AutomaticSize.Y
     body.Visible = props.Open ~= false
     body.Parent = frame
@@ -79,7 +79,7 @@ function Section.new(parent, deps, props)
     list.Parent = body
 
     local pad = Instance.new("UIPadding")
-    pad.PaddingBottom = UDim.new(0, 8)
+    pad.PaddingBottom = UDim.new(0, 7)
     pad.Parent = body
 
     local self = setmetatable({
