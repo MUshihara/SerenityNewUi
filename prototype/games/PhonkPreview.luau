@@ -2715,7 +2715,7 @@ env.warn = silent
 
 local buildOk, buildResult = pcall(function()
     local SerenitySource = game:HttpGet(
-        "https://raw.githubusercontent.com/MUshihara/SerenityNewUi/e701fa2e20f0bb619765be2f5565e131c583e87f/prototype/dist/SerenityPhonkUI.lua"
+        "https://raw.githubusercontent.com/MUshihara/SerenityNewUi/b003e6cc7746ed16c4f11f1ca55efad3ccde3926/prototype/dist/SerenityPhonkUI.lua"
             .. "?phonk-final="
             .. tostring(os.time())
     )
