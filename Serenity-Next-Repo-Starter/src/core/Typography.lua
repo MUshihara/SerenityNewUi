@@ -20,6 +20,9 @@ local function specFor(role, tokens)
         Value = {sizes.Value, Typography.Font.Medium},
         Status = {sizes.Status, Typography.Font.Bold},
         Nav = {sizes.Nav, Typography.Font.Medium},
+        Metric = {sizes.Metric, Typography.Font.Medium},
+        BannerTitle = {sizes.BannerTitle, Typography.Font.Semibold},
+        BannerBody = {sizes.BannerBody, Typography.Font.Regular},
     }
     return map[role] or map.Control
 end
