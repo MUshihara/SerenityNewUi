@@ -1,36 +1,47 @@
 local Tokens = {}
 
 Tokens.Size = {
-    Window = Vector2.new(720, 460),
-    Topbar = 56,
-    Sidebar = 118,
+    Window = Vector2.new(760, 480),
+    Topbar = 52,
+    Sidebar = 120,
     SidebarCollapsed = 58,
     Footer = 0,
 
-    SectionHeader = 54,
-    Control = 54,
-    Button = 50,
-    Slider = 62,
-    Select = 54,
-    Status = 48,
+    NavRow = 42,
+    NavIcon = 30,
+    GameContext = 64,
+    MetricPill = 26,
+    SegmentTabs = 34,
+    InfoBanner = 62,
+
+    SectionHeader = 50,
+    Control = 52,
+    Button = 48,
+    Slider = 60,
+    Select = 52,
+    Status = 46,
 
     RadiusShell = 16,
-    RadiusSection = 11,
-    RadiusControl = 9,
+    RadiusSection = 10,
+    RadiusControl = 8,
     RadiusPopup = 11,
+    RadiusTile = 9,
 }
 
 Tokens.Type = {
-    Brand = 15,
-    BrandSub = 9,
-    Page = 22,
-    PageSub = 10,
-    Section = 14,
-    Control = 13,
+    Brand = 14,
+    BrandSub = 8,
+    Page = 17,
+    PageSub = 9,
+    Section = 13,
+    Control = 12,
     Description = 10,
     Value = 11,
     Status = 9,
     Nav = 11,
+    Metric = 9,
+    BannerTitle = 11,
+    BannerBody = 9,
 }
 
 Tokens.Space = {
@@ -43,49 +54,52 @@ Tokens.Space = {
 }
 
 Tokens.Color = {
-    Shell = Color3.fromRGB(11, 16, 25),
-    ShellDeep = Color3.fromRGB(7, 11, 18),
-    Sidebar = Color3.fromRGB(11, 17, 27),
+    Shell = Color3.fromRGB(9, 14, 22),
+    ShellDeep = Color3.fromRGB(5, 8, 13),
+    Sidebar = Color3.fromRGB(8, 12, 19),
 
-    Surface = Color3.fromRGB(24, 31, 43),
-    SurfaceSoft = Color3.fromRGB(28, 36, 49),
-    Control = Color3.fromRGB(23, 30, 42),
-    ControlHover = Color3.fromRGB(31, 40, 55),
-    Inset = Color3.fromRGB(15, 21, 31),
-    Popup = Color3.fromRGB(20, 27, 39),
+    Surface = Color3.fromRGB(23, 30, 42),
+    SurfaceSoft = Color3.fromRGB(29, 38, 52),
+    Control = Color3.fromRGB(22, 29, 40),
+    ControlHover = Color3.fromRGB(32, 41, 55),
+    Inset = Color3.fromRGB(13, 19, 28),
+    Popup = Color3.fromRGB(18, 25, 36),
 
-    Text = Color3.fromRGB(244, 247, 252),
-    TextMuted = Color3.fromRGB(183, 193, 211),
-    TextDim = Color3.fromRGB(122, 135, 158),
+    Text = Color3.fromRGB(246, 248, 252),
+    TextMuted = Color3.fromRGB(188, 197, 214),
+    TextDim = Color3.fromRGB(126, 138, 160),
 
-    Stroke = Color3.fromRGB(87, 101, 125),
-    StrokeBright = Color3.fromRGB(140, 166, 196),
+    Stroke = Color3.fromRGB(83, 97, 119),
+    StrokeBright = Color3.fromRGB(153, 177, 205),
 
-    Accent = Color3.fromRGB(77, 220, 242),
-    Mint = Color3.fromRGB(82, 231, 184),
-    Lavender = Color3.fromRGB(177, 130, 255),
+    Accent = Color3.fromRGB(78, 220, 242),
+    Mint = Color3.fromRGB(82, 232, 184),
+    Lavender = Color3.fromRGB(188, 116, 255),
+    Pink = Color3.fromRGB(244, 73, 171),
+    Blue = Color3.fromRGB(87, 163, 255),
     Amber = Color3.fromRGB(247, 190, 79),
     Red = Color3.fromRGB(246, 103, 132),
-    Disabled = Color3.fromRGB(71, 81, 101),
+    Disabled = Color3.fromRGB(68, 79, 98),
 }
 
 Tokens.Material = {
-    ShellTransparency = 0.10,
-    SidebarTransparency = 0.18,
-    SectionTransparency = 0.24,
-    ControlTransparency = 0.28,
+    ShellTransparency = 0.07,
+    SidebarTransparency = 0.04,
+    SectionTransparency = 0.70,
+    ControlTransparency = 0.48,
     PopupTransparency = 0.05,
-    ShadowTransparency = 0.58,
-    EdgeTransparency = 0.62,
-    HighlightTransparency = 0.82,
+    ShadowTransparency = 0.56,
+    EdgeTransparency = 0.66,
+    HighlightTransparency = 0.88,
 }
 
 Tokens.Motion = {
-    Hover = 0.11,
+    Hover = 0.10,
     Toggle = 0.14,
     Popup = 0.17,
-    Page = 0.16,
-    Collapse = 0.18,
+    Page = 0.14,
+    Collapse = 0.17,
+    Nav = 0.14,
 }
 
 return Tokens
