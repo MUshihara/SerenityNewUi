@@ -32,6 +32,17 @@ return function(theme, runtime, icons)
             BorderSizePixel=0,AutoButtonColor=false,BackgroundColor3=theme.Inset,Size=UDim2.fromOffset(100,30)})
         for k,v in pairs(props or {}) do b[k]=v end
         self:Round(b,7)
+        local feedback=self:New('UIStroke',b,{Color=theme.Text,Thickness=1,Transparency=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border})
+        local hovering=false
+        local function highlight(value) if not runtime.Destroyed then self:Tween(feedback,0.1,{Transparency=value}) end end
+        b.MouseEnter:Connect(function() hovering=true; highlight(0.78) end)
+        b.MouseLeave:Connect(function() hovering=false; highlight(1) end)
+        b.InputBegan:Connect(function(event)
+            if event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch then highlight(0.5) end
+        end)
+        b.InputEnded:Connect(function(event)
+            if event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch then highlight(hovering and 0.78 or 1) end
+        end)
         if callback then b.Activated:Connect(function() if not runtime.Destroyed then callback() end end) end
         return b
     end
@@ -50,7 +61,7 @@ return function(theme, runtime, icons)
         theme.Accent=color
         for _,fn in ipairs(self.AccentBindings) do fn(color) end
     end
-    function UI:Tween(object,time,props) return runtime:Tween(object,time,props,self.Reduced) end
+    function UI:Tween(object,time,props,completed) return runtime:Tween(object,time,props,self.Reduced,completed) end
     function UI:Row(parent,title,height)
         local row=self:Frame(parent,{Size=UDim2.new(1,0,0,height or 40)})
         local label=self:Label(row,title,12,UDim2.fromOffset(12,0),UDim2.new(0.5,-18,1,0))

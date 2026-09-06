@@ -32,3 +32,9 @@ The test runner uses the system Lua 5.4 library and stubs engine services; it do
 - Comparison screenshots against Concept 02 and the uploaded video.
 
 The current mobile renderer and production V3 bridge are outside this desktop preview. Existing production routes are not changed.
+
+## Motion revision
+
+Added original implementations of completion-driven popup fades, short popup entry movement, sub-tab movement, animated navigation colors and section arrows, and button hover/press outlines. No third-party code copied. Runtime disconnects completion handlers on interruption and teardown. Popup replacement cancels descendant tweens before destruction.
+
+Syntax and mocked lifecycle suite pass, including delayed completion after popup close/reopen and destruction during an exit. These tests do not measure rendering quality, CanvasGroup texture behavior, or frame rate; a Roblox recording remains required.

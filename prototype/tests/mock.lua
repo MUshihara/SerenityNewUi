@@ -87,12 +87,14 @@ local input={InputChanged=signal(),InputEnded=signal(),InputBegan=signal(),GetFo
 local files,json,seq={}, {},0
 readfile=function(p)return files[p]end;writefile=function(p,v)assert(p:find('^SerenityConcept02/'),'production config write');files[p]=v end
 isfile=function(p)return files[p]~=nil end;makefolder=function(p)assert(p=='SerenityConcept02')end
+local holdTweens=false
+local pendingTweens={}
 local services={
     UserInputService=input,
     Players={LocalPlayer={WaitForChild=function()return pg end}},
     MarketplaceService={GetProductInfo=function()return{Name='Mock Game'}end},
     HttpService={JSONEncode=function(_,v)seq=seq+1;local k=tostring(seq);json[k]=copy(v);return k end,JSONDecode=function(_,v)return copy(json[v])end},
-    TweenService={Create=function(_,obj,_,props)return{Play=function()for k,v in pairs(props)do obj[k]=v end end,Cancel=function()end}end},
+    TweenService={Create=function(_,obj,_,props)local t={Completed=signal()};function t:Play() for k,v in pairs(props)do obj[k]=v end;if holdTweens then pendingTweens[#pendingTweens+1]=self else self.Completed:Fire(Enum.PlaybackState.Completed) end end;function t:Cancel()self.Completed:Fire(Enum.PlaybackState.Cancelled)end;return t end},
 }
 game={GameId=42,PlaceId=123,GetService=function(_,k)return assert(services[k],k)end,HttpGet=function()error('Unexpected network call')end}
 getgenv=function()return _G end
@@ -135,6 +137,16 @@ local second=start();assert(app.Runtime.Destroyed,'reexecute did not clean old p
 assert(second.Current=='Settings' and second.Config:Get('View.Tab.Settings')=='Profiles','layout not restored')
 assert(second.Controls['Automation.Farming.AutoCollect']:Get()==true,'value not restored')
 assert(_G.__SERENITY_RUNTIME_V3==production,'production runtime changed')
+holdTweens=true
+second:Search();flushDeferred()
+local old=second.Popup.Active
+second.Popup:Close();assert(second.Popup.Closing==old,'exit animation discarded early')
+second:Search();flushDeferred()
+local latest=second.Popup.Active
+for _,t in ipairs(pendingTweens)do t.Completed:Fire(Enum.PlaybackState.Completed)end
+pendingTweens={}
+assert(second.Popup.Active==latest and latest~=old,'old close affected reopened popup')
+second.Popup:Close()
 second:Destroy();second:Destroy();assert(activeConnections==0,'connections remained after destroy')
 assert(_G.__SERENITY_CONCEPT_02==nil)
 for _,f in ipairs(delayed)do f()end

@@ -7,7 +7,7 @@ return function(ui,parent,title,open,onOpen)
     local list=ui:List(body,0)
     local section={Frame=root,Body=body,Open=open~=false,Revision=0}
     local function size(animate)
-        caret.Rotation=section.Open and 180 or 0
+        ui:Tween(caret,animate and 0.18 or 0,{Rotation=section.Open and 180 or 0})
         local target=34+(section.Open and (list.AbsoluteContentSize.Y+5) or 0)
         ui:Tween(root,animate and 0.18 or 0,{Size=UDim2.new(1,0,0,target)})
     end

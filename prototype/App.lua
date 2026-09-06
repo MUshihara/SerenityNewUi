@@ -101,6 +101,10 @@ return function(M,options)
                     input:Cancel(); popup:Close(); state:Set('View.Tab.'..page.Id,id)
                     for key,tab in pairs(tabMap) do
                         tab.Scroll.Visible=key==id
+                        if key==id then
+                            tab.Scroll.Position=UDim2.fromOffset(ui.Reduced and 0 or 5,tabBar and 42 or 0)
+                            ui:Tween(tab.Scroll,0.16,{Position=UDim2.fromOffset(0,tabBar and 42 or 0)})
+                        end
                         if tab.Button then tab.Button.BackgroundColor3=key==id and ui.T.Accent or ui.T.Inset end
                     end
                 end

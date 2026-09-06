@@ -1,13 +1,29 @@
 return function(ui,input,screen,getScale)
-    local Popup={Active=nil,Owner=nil}
-    function Popup:Close()
+    local Popup={Active=nil,Owner=nil,Closing=nil,Panel=nil}
+    function Popup:Discard(root)
+        if not root then return end
+        local function cancel(object)
+            ui.R:CancelTween(object)
+            for _,child in ipairs(object:GetChildren()) do cancel(child) end
+        end
+        cancel(root)
+        root:Destroy()
+    end
+    function Popup:Close(instant)
+        self:Discard(self.Closing); self.Closing=nil
+        local root,panel=self.Active,self.Panel
         local focused=input.Service:GetFocusedTextBox()
-        if focused and self.Active and focused:IsDescendantOf(self.Active) then focused:ReleaseFocus() end
-        if self.Active then self.Active:Destroy() end
-        self.Active=nil; self.Owner=nil
+        if focused and root and focused:IsDescendantOf(root) then focused:ReleaseFocus() end
+        self.Active=nil; self.Owner=nil; self.Panel=nil
+        if not root then return end
+        if instant or ui.R.Destroyed or ui.Reduced then self:Discard(root); return end
+        self.Closing=root
+        ui:Tween(panel,0.12,{GroupTransparency=1},function()
+            if self.Closing==root then self.Closing=nil; self:Discard(root) end
+        end)
     end
     function Popup:Open(owner,width,height,anchor)
-        self:Close(); input:Cancel()
+        self:Close(true); input:Cancel()
         local root=ui:Frame(screen,{Size=UDim2.fromScale(1,1),ZIndex=100})
         self.Active=root; self.Owner=owner
         local shield=ui:Button(root,'',{Size=UDim2.fromScale(1,1),BackgroundTransparency=1,ZIndex=1},function() self:Close() end)
@@ -22,9 +38,13 @@ return function(ui,input,screen,getScale)
         end
         x=math.clamp(x,10,math.max(10,view.X-width*scale-10))
         y=math.clamp(y,10,math.max(10,view.Y-height*scale-10))
-        local panel=ui:Panel(root,{Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
+        local panel=ui:New('CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,GroupTransparency=ui.Reduced and 0 or 1,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
         ui:New('UIScale',panel,{Scale=scale})
         panel.BackgroundColor3=Color3.fromRGB(19,19,24)
+        ui:Round(panel,10)
+        self.Panel=panel
+        panel.Position=UDim2.fromOffset(x,y+(ui.Reduced and 0 or 6))
+        ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
         return panel
     end
     function Popup:Message(title,message,link)

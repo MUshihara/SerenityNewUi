@@ -46,10 +46,10 @@ return function(ui,input,state,options)
         local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,T.Width*scale.Scale/2+12,math.max(T.Width*scale.Scale/2+12,view.X-T.Width*scale.Scale/2-12))
         local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,T.Height*scale.Scale/2+12,math.max(T.Height*scale.Scale/2+12,view.Y-T.Height*scale.Scale/2-12))
         holder.Position=UDim2.fromOffset(x,y)
-        if self.Popup then self.Popup:Close() end
+        if self.Popup then self.Popup:Close(true) end
     end
     function app:SetVisible(value)
-        self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close() end
+        self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close(true) end
         holder.Visible=self.Visible; launcher.Visible=not self.Visible
     end
     function app:AddPage(spec)
@@ -69,12 +69,12 @@ return function(ui,input,state,options)
     end
     function app:SelectPage(id)
         local target=self.Pages[id]; if not target then return end
-        input:Cancel(); if self.Popup then self.Popup:Close() end
+        input:Cancel(); if self.Popup then self.Popup:Close(true) end
         self.Current=id; state:Set('View.Page',id)
         title.Text=target.Spec.Title; description.Text=target.Spec.Description or ''
         for key,entry in pairs(self.Pages) do
             local selected=key==id; entry.Frame.Visible=selected
-            entry.Tile.BackgroundColor3=selected and T.Accent or T.Inset
+            ui:Tween(entry.Tile,0.12,{BackgroundColor3=selected and T.Accent or T.Inset})
             entry.Icon.ImageColor3=selected and T.Text or T.Muted
             entry.Label.TextColor3=selected and T.Text or T.Muted
         end

@@ -7,7 +7,7 @@ M.Runtime = (function()
 local Runtime = {}
 Runtime.__index = Runtime
 function Runtime.new()
-    return setmetatable({Destroyed=false, Cleanups={}, Tweens={}}, Runtime)
+    return setmetatable({Destroyed=false, Cleanups={}, Tweens={}, TweenConnections={}}, Runtime)
 end
 function Runtime:Own(value)
     if self.Destroyed then
@@ -23,22 +23,35 @@ function Runtime:OnDestroy(callback) self.Cleanups[#self.Cleanups+1]=callback en
 function Runtime:Connect(signal, callback)
     return self:Own(signal:Connect(function(...) if not self.Destroyed then callback(...) end end))
 end
-function Runtime:Tween(object, seconds, properties, reduced)
-    if self.Destroyed then return end
+function Runtime:CancelTween(object)
+    local connection=self.TweenConnections[object]
+    if connection then connection:Disconnect(); self.TweenConnections[object]=nil end
     if self.Tweens[object] then self.Tweens[object]:Cancel(); self.Tweens[object]=nil end
+end
+function Runtime:Tween(object, seconds, properties, reduced, completed)
+    if self.Destroyed then return end
+    self:CancelTween(object)
     if reduced or seconds==0 then
         for k,v in pairs(properties) do object[k]=v end
+        if completed then completed() end
         return
     end
     local tween=game:GetService('TweenService'):Create(object,TweenInfo.new(seconds,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),properties)
     self.Tweens[object]=tween
+    self.TweenConnections[object]=tween.Completed:Connect(function(status)
+        if self.Tweens[object]~=tween then return end
+        self.TweenConnections[object]:Disconnect(); self.TweenConnections[object]=nil
+        self.Tweens[object]=nil
+        if status==Enum.PlaybackState.Completed and not self.Destroyed and completed then completed() end
+    end)
     tween:Play()
-    task.delay(seconds+0.05,function() if self.Tweens[object]==tween then self.Tweens[object]=nil end end)
     return tween
 end
 function Runtime:Destroy()
     if self.Destroyed then return end
     self.Destroyed=true
+    for _,c in pairs(self.TweenConnections) do c:Disconnect() end
+    self.TweenConnections={}
     for _,t in pairs(self.Tweens) do pcall(function() t:Cancel() end) end
     self.Tweens={}
     for i=#self.Cleanups,1,-1 do pcall(self.Cleanups[i]) end
@@ -421,6 +434,17 @@ return function(theme, runtime, icons)
             BorderSizePixel=0,AutoButtonColor=false,BackgroundColor3=theme.Inset,Size=UDim2.fromOffset(100,30)})
         for k,v in pairs(props or {}) do b[k]=v end
         self:Round(b,7)
+        local feedback=self:New('UIStroke',b,{Color=theme.Text,Thickness=1,Transparency=1,ApplyStrokeMode=Enum.ApplyStrokeMode.Border})
+        local hovering=false
+        local function highlight(value) if not runtime.Destroyed then self:Tween(feedback,0.1,{Transparency=value}) end end
+        b.MouseEnter:Connect(function() hovering=true; highlight(0.78) end)
+        b.MouseLeave:Connect(function() hovering=false; highlight(1) end)
+        b.InputBegan:Connect(function(event)
+            if event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch then highlight(0.5) end
+        end)
+        b.InputEnded:Connect(function(event)
+            if event.UserInputType==Enum.UserInputType.MouseButton1 or event.UserInputType==Enum.UserInputType.Touch then highlight(hovering and 0.78 or 1) end
+        end)
         if callback then b.Activated:Connect(function() if not runtime.Destroyed then callback() end end) end
         return b
     end
@@ -439,7 +463,7 @@ return function(theme, runtime, icons)
         theme.Accent=color
         for _,fn in ipairs(self.AccentBindings) do fn(color) end
     end
-    function UI:Tween(object,time,props) return runtime:Tween(object,time,props,self.Reduced) end
+    function UI:Tween(object,time,props,completed) return runtime:Tween(object,time,props,self.Reduced,completed) end
     function UI:Row(parent,title,height)
         local row=self:Frame(parent,{Size=UDim2.new(1,0,0,height or 40)})
         local label=self:Label(row,title,12,UDim2.fromOffset(12,0),UDim2.new(0.5,-18,1,0))
@@ -512,15 +536,31 @@ end)()
 -- MODULE: core/Popup.lua
 M.Popup = (function()
 return function(ui,input,screen,getScale)
-    local Popup={Active=nil,Owner=nil}
-    function Popup:Close()
+    local Popup={Active=nil,Owner=nil,Closing=nil,Panel=nil}
+    function Popup:Discard(root)
+        if not root then return end
+        local function cancel(object)
+            ui.R:CancelTween(object)
+            for _,child in ipairs(object:GetChildren()) do cancel(child) end
+        end
+        cancel(root)
+        root:Destroy()
+    end
+    function Popup:Close(instant)
+        self:Discard(self.Closing); self.Closing=nil
+        local root,panel=self.Active,self.Panel
         local focused=input.Service:GetFocusedTextBox()
-        if focused and self.Active and focused:IsDescendantOf(self.Active) then focused:ReleaseFocus() end
-        if self.Active then self.Active:Destroy() end
-        self.Active=nil; self.Owner=nil
+        if focused and root and focused:IsDescendantOf(root) then focused:ReleaseFocus() end
+        self.Active=nil; self.Owner=nil; self.Panel=nil
+        if not root then return end
+        if instant or ui.R.Destroyed or ui.Reduced then self:Discard(root); return end
+        self.Closing=root
+        ui:Tween(panel,0.12,{GroupTransparency=1},function()
+            if self.Closing==root then self.Closing=nil; self:Discard(root) end
+        end)
     end
     function Popup:Open(owner,width,height,anchor)
-        self:Close(); input:Cancel()
+        self:Close(true); input:Cancel()
         local root=ui:Frame(screen,{Size=UDim2.fromScale(1,1),ZIndex=100})
         self.Active=root; self.Owner=owner
         local shield=ui:Button(root,'',{Size=UDim2.fromScale(1,1),BackgroundTransparency=1,ZIndex=1},function() self:Close() end)
@@ -535,9 +575,13 @@ return function(ui,input,screen,getScale)
         end
         x=math.clamp(x,10,math.max(10,view.X-width*scale-10))
         y=math.clamp(y,10,math.max(10,view.Y-height*scale-10))
-        local panel=ui:Panel(root,{Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
+        local panel=ui:New('CanvasGroup',root,{BackgroundTransparency=0,BorderSizePixel=0,GroupTransparency=ui.Reduced and 0 or 1,Size=UDim2.fromOffset(width,height),Position=UDim2.fromOffset(x,y),ZIndex=2,Active=true})
         ui:New('UIScale',panel,{Scale=scale})
         panel.BackgroundColor3=Color3.fromRGB(19,19,24)
+        ui:Round(panel,10)
+        self.Panel=panel
+        panel.Position=UDim2.fromOffset(x,y+(ui.Reduced and 0 or 6))
+        ui:Tween(panel,0.16,{GroupTransparency=0,Position=UDim2.fromOffset(x,y)})
         return panel
     end
     function Popup:Message(title,message,link)
@@ -569,7 +613,7 @@ return function(ui,parent,title,open,onOpen)
     local list=ui:List(body,0)
     local section={Frame=root,Body=body,Open=open~=false,Revision=0}
     local function size(animate)
-        caret.Rotation=section.Open and 180 or 0
+        ui:Tween(caret,animate and 0.18 or 0,{Rotation=section.Open and 180 or 0})
         local target=34+(section.Open and (list.AbsoluteContentSize.Y+5) or 0)
         ui:Tween(root,animate and 0.18 or 0,{Size=UDim2.new(1,0,0,target)})
     end
@@ -867,10 +911,10 @@ return function(ui,input,state,options)
         local x=math.clamp(holder.AbsolutePosition.X+holder.AbsoluteSize.X/2,T.Width*scale.Scale/2+12,math.max(T.Width*scale.Scale/2+12,view.X-T.Width*scale.Scale/2-12))
         local y=math.clamp(holder.AbsolutePosition.Y+holder.AbsoluteSize.Y/2,T.Height*scale.Scale/2+12,math.max(T.Height*scale.Scale/2+12,view.Y-T.Height*scale.Scale/2-12))
         holder.Position=UDim2.fromOffset(x,y)
-        if self.Popup then self.Popup:Close() end
+        if self.Popup then self.Popup:Close(true) end
     end
     function app:SetVisible(value)
-        self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close() end
+        self.Visible=value==true; input:Cancel(); if self.Popup then self.Popup:Close(true) end
         holder.Visible=self.Visible; launcher.Visible=not self.Visible
     end
     function app:AddPage(spec)
@@ -890,12 +934,12 @@ return function(ui,input,state,options)
     end
     function app:SelectPage(id)
         local target=self.Pages[id]; if not target then return end
-        input:Cancel(); if self.Popup then self.Popup:Close() end
+        input:Cancel(); if self.Popup then self.Popup:Close(true) end
         self.Current=id; state:Set('View.Page',id)
         title.Text=target.Spec.Title; description.Text=target.Spec.Description or ''
         for key,entry in pairs(self.Pages) do
             local selected=key==id; entry.Frame.Visible=selected
-            entry.Tile.BackgroundColor3=selected and T.Accent or T.Inset
+            ui:Tween(entry.Tile,0.12,{BackgroundColor3=selected and T.Accent or T.Inset})
             entry.Icon.ImageColor3=selected and T.Text or T.Muted
             entry.Label.TextColor3=selected and T.Text or T.Muted
         end
@@ -1115,6 +1159,10 @@ return function(M,options)
                     input:Cancel(); popup:Close(); state:Set('View.Tab.'..page.Id,id)
                     for key,tab in pairs(tabMap) do
                         tab.Scroll.Visible=key==id
+                        if key==id then
+                            tab.Scroll.Position=UDim2.fromOffset(ui.Reduced and 0 or 5,tabBar and 42 or 0)
+                            ui:Tween(tab.Scroll,0.16,{Position=UDim2.fromOffset(0,tabBar and 42 or 0)})
+                        end
                         if tab.Button then tab.Button.BackgroundColor3=key==id and ui.T.Accent or ui.T.Inset end
                     end
                 end
