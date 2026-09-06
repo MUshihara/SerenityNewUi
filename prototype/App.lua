@@ -28,6 +28,7 @@ return function(M,options)
         app=M.Renderer(ui,input,state,options,M.MobileLayout)
         local popup=M.Popup(ui,input,app.Screen,function() return app.Scale.Scale end)
         app.Popup=popup; app.Runtime=runtime; app.Config=state; app.Controls={}; app.Sections={}; app.Tabs={}; app.SearchEntries={}
+        options.DiscordBytes=M.DiscordAsset
         local assets=M.Assets(runtime,options)
         local controls=M.Controls(ui,input,popup)
         local choice=M.Choice(ui,popup)
@@ -42,10 +43,20 @@ return function(M,options)
             elseif effect=='Motion' then ui.Reduced=value==true
             elseif effect=='LowEffects' then ui.LowEffects=value==true; popup:Close(true); self:Fit() end
         end
+        function app:Notify(message)
+            if self.Toast then self.Toast:Destroy() end
+            local toast=ui:Panel(self.Screen,{AnchorPoint=Vector2.new(0.5,1),Position=UDim2.new(0.5,0,1,-14),Size=UDim2.new(0,280,0,44),ZIndex=150})
+            ui:Icon(toast,'check',20,UDim2.fromOffset(12,12),ui.T.Accent)
+            ui:Label(toast,message,12,UDim2.fromOffset(42,0),UDim2.new(1,-52,1,0))
+            self.Toast=toast
+            task.delay(2.5,function()
+                if not runtime.Destroyed and self.Toast==toast then toast:Destroy(); self.Toast=nil end
+            end)
+        end
         function app:Copy(text,title)
             if type(setclipboard)=='function' then
                 local good=pcall(setclipboard,text)
-                if good then popup:Message(title or 'Copied','The link or value has been copied to your clipboard.'); return end
+                if good then self:Notify((title or 'Value')..' copied'); return end
             end
             popup:Message(title or 'Copy this value','Select the value below and copy it manually.',text)
         end
@@ -54,7 +65,7 @@ return function(M,options)
             elseif name=='Search' then self:Search()
             elseif name=='Minimize' then self:SetVisible(false)
             elseif name=='Center' then self.Holder.Position=UDim2.fromScale(0.5,0.5); self:Fit()
-            elseif name=='Save' then local saved=state:Save(); popup:Message('Preview settings',saved and 'Your preview settings have been saved.' or 'Local file access is unavailable. Settings will last for this session.')
+            elseif name=='Save' then local saved=state:Save(); self:Notify(saved and 'Settings saved' or 'Session settings only')
             elseif name=='Reset' then
                 local panel=popup:Open(nil,340,170)
                 ui:Label(panel,'Reset preview settings?',15,UDim2.fromOffset(16,12),UDim2.new(1,-32,0,30),nil,true)
@@ -92,12 +103,31 @@ return function(M,options)
             app.SearchEntries[#app.SearchEntries+1]={Title=page.Title,Path=page.Title,Page=page.Id,Target=pageFrame}
             if page.Id=='About' then
                 local scroll=scroller(pageFrame)
+                local player=game:GetService('Players').LocalPlayer
+                local profile=ui:Panel(scroll,{Size=UDim2.new(1,0,0,94),LayoutOrder=-2})
+                local avatar=ui:New('ImageLabel',profile,{BackgroundColor3=ui.T.Inset,BorderSizePixel=0,Image='rbxthumb://type=AvatarHeadShot&id='..tostring(player.UserId or 0)..'&w=150&h=150',Position=UDim2.fromOffset(12,14),Size=UDim2.fromOffset(52,52)})
+                ui:Round(avatar,26)
+                ui:Label(profile,player.DisplayName or 'Welcome',15,UDim2.fromOffset(76,12),UDim2.new(1,-88,0,24),nil,true)
+                ui:Label(profile,'@'..(player.Name or 'Player'),11,UDim2.fromOffset(76,36),UDim2.new(1,-88,0,18),ui.T.Muted)
+                local timer=ui:Label(profile,'Session · 00:00:00',11,UDim2.fromOffset(76,60),UDim2.new(1,-88,0,22),ui.T.Muted)
+                local started=os.clock()
+                local function tick()
+                    if runtime.Destroyed then return end
+                    if app.Visible and app.Current=='About' then
+                        local seconds=math.floor(os.clock()-started)
+                        timer.Text=string.format('Session · %02d:%02d:%02d',math.floor(seconds/3600),math.floor(seconds/60)%60,seconds%60)
+                    end
+                    task.delay(1,tick)
+                end
+                task.delay(1,tick)
                 local section=M.Section(ui,scroll,'What’s new',false,function() popup:Close() end)
-                controls.Paragraph(section.Body,{Title='Concept 02',Text='Compact navigation, image cards, working controls and saved preview settings.',Height=80})
+                controls.Paragraph(section.Body,{Title='Preview · September 6, 2026',Text='Personal profile, session timer, compact notifications and mobile layouts.',Height=80})
                 local cards=ui:Frame(scroll,{Size=UDim2.new(1,0,0,280)})
                 local community=card(cards,'Community',0,'Serenity Community','Meet the community','messages-square','Copy Discord Link',function() app:Copy(options.DiscordInvite,'Discord invite') end)
+                local discord=ui:New('ImageLabel',community,{BackgroundTransparency=1,Position=UDim2.new(1,-36,0,7),Size=UDim2.fromOffset(24,24),Image=''})
+                assets:Load('Discord',discord)
                 local updates=card(cards,'Updates',0.5,'Release Notes','See the latest changes','megaphone','View Changelog',function()
-                    popup:Message('Concept 02 — preview','Added compact navigation, expandable sections, searchable selections, image cards, UI scale, accent colors, and isolated preview settings.\n\nGame automation is not connected.')
+                    popup:Message('Preview · September 6, 2026','• Avatar and session timer\n• Discord branding and copy feedback\n• Dedicated mobile layout\n• Larger icons and Low Effects\n\nGame automation is not connected.')
                 end)
                 app.AboutCards={Container=cards,Community=community,Updates=updates}
                 local function arrangeCards()
@@ -170,6 +200,31 @@ return function(M,options)
         function app:Search()
             if not self.Visible then self:SetVisible(true) end
             local panel=popup:Open(nil,430,350)
+            local function fitSearch()
+                if runtime.Destroyed or popup.Panel~=panel then return end
+                ui.R:CancelTween(panel)
+                if panel:IsA('CanvasGroup') then panel.GroupTransparency=0 end
+                local view=self.Screen.AbsoluteSize
+                local available=view.Y
+                pcall(function()
+                    if input.Service.OnScreenKeyboardVisible then
+                        available=math.max(120,view.Y-input.Service.OnScreenKeyboardSize.Y)
+                    end
+                end)
+                local scale=math.min(1,(view.X-20)/430)
+                panel.Size=UDim2.fromOffset(430,math.max(115,math.min(350,(available-16)/scale)))
+                panel.Position=UDim2.fromOffset((view.X-430*scale)/2,8)
+                for _,child in ipairs(panel:GetChildren()) do if child:IsA('UIScale') then child.Scale=scale end end
+            end
+            if ui.Touch then
+                fitSearch()
+                local connections={}
+                for _,property in ipairs({'OnScreenKeyboardVisible','OnScreenKeyboardSize'}) do
+                    local ok,connection=pcall(function() return input.Service:GetPropertyChangedSignal(property):Connect(fitSearch) end)
+                    if ok then connections[#connections+1]=connection end
+                end
+                popup.OnClose=function() for _,connection in ipairs(connections) do connection:Disconnect() end end
+            end
             ui:Label(panel,'Search controls',15,UDim2.fromOffset(14,10),UDim2.new(1,-28,0,28),nil,true)
             local box=ui:New('TextBox',panel,{Position=UDim2.fromOffset(12,46),Size=UDim2.new(1,-24,0,33),BackgroundColor3=ui.T.Inset,BorderSizePixel=0,
                 Text='',PlaceholderText='Page, tab or control...',ClearTextOnFocus=false,TextSize=12,Font=ui.T.Medium,TextColor3=ui.T.Text,PlaceholderColor3=ui.T.Dim,TextXAlignment=Enum.TextXAlignment.Left}); ui:Round(box,6); ui:Pad(box,10,0,10,0)

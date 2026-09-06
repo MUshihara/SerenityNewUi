@@ -5,7 +5,7 @@ import hashlib
 root = Path(__file__).resolve().parent
 modules = [
     ('Runtime','core/Runtime.lua'), ('Theme','core/Theme.lua'),
-    ('Icons','core/Icons.lua'), ('State','core/State.lua'),
+    ('DiscordAsset','core/DiscordAsset.lua'), ('Icons','core/Icons.lua'), ('State','core/State.lua'),
     ('UI','core/UI.lua'), ('Input','core/Input.lua'), ('Assets','core/Assets.lua'),
     ('Popup','core/Popup.lua'), ('Section','components/Section.lua'),
     ('Controls','components/Controls.lua'), ('Choice','components/Choice.lua'),

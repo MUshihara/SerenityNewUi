@@ -1,6 +1,6 @@
 return function(runtime,options)
     local Assets={}
-    local names={Community='community-v1.png',Updates='updates-v1.png'}
+    local names={Community='community-v1.png',Updates='updates-v1.png',Discord='discord-v1.png'}
     local custom=getcustomasset or getsynasset
     local function validPNG(bytes) return type(bytes)=='string' and #bytes<12000000 and bytes:sub(1,8)=='\137PNG\13\10\26\10' end
     function Assets:Load(kind,label)
@@ -15,7 +15,7 @@ return function(runtime,options)
                 local bytes
                 if isfile(path) then bytes=readfile(path) end
                 if not validPNG(bytes) then
-                    bytes=game:HttpGet(options.AssetBase..names[kind])
+                    bytes=kind=='Discord' and options.DiscordBytes or game:HttpGet(options.AssetBase..names[kind])
                     assert(validPNG(bytes),'Invalid banner response')
                     writefile(path,bytes)
                 end

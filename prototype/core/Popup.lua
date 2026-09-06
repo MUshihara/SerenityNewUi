@@ -10,6 +10,7 @@ return function(ui,input,screen,getScale)
         root:Destroy()
     end
     function Popup:Close(instant)
+        if self.OnClose then self.OnClose(); self.OnClose=nil end
         self:Discard(self.Closing); self.Closing=nil
         local root,panel=self.Active,self.Panel
         local focused=input.Service:GetFocusedTextBox()

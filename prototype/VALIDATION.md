@@ -50,3 +50,9 @@ Mock checks pass for 390×760 portrait, 844×350 landscape and 360×640 portrait
 Reviewed both new recordings and the production V14 mobile source (head-02 and part-02): its default geometry is 650×420 with a 50 px header and separate sidebar. Added an independent layouts/Mobile.lua geometry profile using that compact landscape approach, with a portrait variant and functional scale control. Existing production rendering code is unchanged. Navigation gets explicit order.
 
 Replaced the earlier scale-dependent section-height approach with the sum of explicit logical row heights. The earlier synthetic AbsoluteContentSize test did not establish real engine behavior; the new regression checks invariant logical height at 75, 90, 100 and 115 percent. Phone bounds and cleanup mocks pass. Actual phone stability and visual output remain unverified pending device testing.
+
+## Personal About revision
+
+Added one Roblox avatar thumbnail, display name, username and elapsed session timer. Timer uses one delayed tick per second, updates text only on the visible About page and exits after destruction. Compact replaceable copy/save notifications dismiss after 2.5 seconds. Discord mark is bundled as PNG bytes generated from Simple Icons' Discord SVG (https://github.com/simple-icons/simple-icons/blob/develop/icons/discord.svg); local-image support or a DiscordImage override is still needed to display it. Release notes show this preview's changes.
+
+Mobile search listens for keyboard visibility/size while open, sizes results above the keyboard and disconnects on close. Mock tests cover toast replacement and keyboard bounds alongside previous cleanup checks. Actual thumbnail loading and phone keyboard positioning still require device verification.

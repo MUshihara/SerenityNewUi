@@ -86,6 +86,10 @@ Instance={new=function(kind)return setmetatable({ClassName=kind,Kind='Instance',
 typeof=function(v)return type(v)=='table' and v.Kind or type(v)end
 local pg=Instance.new('PlayerGui')
 local input={InputChanged=signal(),InputEnded=signal(),InputBegan=signal(),GetFocusedTextBox=function()return focus end,IsKeyDown=function()return false end}
+local keyboardSignals={}
+function input:GetPropertyChangedSignal(name)
+    keyboardSignals[name]=keyboardSignals[name] or signal();return keyboardSignals[name]
+end
 local files,json,seq={}, {},0
 readfile=function(p)return files[p]end;writefile=function(p,v)assert(p:find('^SerenityConcept02/'),'production config write');files[p]=v end
 isfile=function(p)return files[p]~=nil end;makefolder=function(p)assert(p=='SerenityConcept02')end
@@ -139,6 +143,8 @@ local second=start();assert(app.Runtime.Destroyed,'reexecute did not clean old p
 assert(second.Current=='Settings' and second.Config:Get('View.Tab.Settings')=='Profiles','layout not restored')
 assert(second.Controls['Automation.Farming.AutoCollect']:Get()==true,'value not restored')
 assert(_G.__SERENITY_RUNTIME_V3==production,'production runtime changed')
+second:Notify('First');local firstToast=second.Toast
+second:Notify('Second');assert(firstToast.Destroyed and second.Toast~=firstToast,'toast replacement failed')
 holdTweens=true
 second:Search();flushDeferred()
 local old=second.Popup.Active
@@ -178,6 +184,13 @@ for _,size in ipairs({Vector2.new(390,760),Vector2.new(844,350),Vector2.new(360,
     if size.X<500 then assert(mobile.AboutCards.Updates.Position.Y.Offset==292,'cards failed to stack') end
     mobile:Search();flushDeferred()
     assert(mobile.Popup.Panel.ClassName=='Frame','low effects allocated CanvasGroup')
+    input.OnScreenKeyboardVisible=true;input.OnScreenKeyboardSize=Vector2.new(size.X,math.floor(size.Y/2))
+    keyboardSignals.OnScreenKeyboardVisible:Fire()
+    local panel=mobile.Popup.Panel
+    local popupScale=1
+    for _,child in ipairs(panel:GetChildren()) do if child.ClassName=='UIScale' then popupScale=child.Scale end end
+    assert(panel.Position.Y.Offset+panel.Size.Y.Offset*popupScale<=size.Y-input.OnScreenKeyboardSize.Y,'search overlaps keyboard')
+    input.OnScreenKeyboardVisible=false
     mobile:Destroy()
 end
 _G.SerenityConceptOptions=nil
