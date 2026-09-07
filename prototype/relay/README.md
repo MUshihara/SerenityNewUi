@@ -1,3 +1,7 @@
+# Optional relay — not required by RC1
+
+RC1 uses the owner-approved direct reporting destination in the shared Feedback module. The relay below remains an optional future alternative and is not deployed.
+
 # Shared report destination — prepared, not deployed
 
 Deploy worker.js as a Cloudflare Worker with FEEDBACK_WEBHOOK stored as a secret and REPORT_LIMITS bound to a KV namespace. Configure the resulting HTTPS URL through SerenityFeedbackRelay (or the library FeedbackRelay option). End users then submit reports without seeing or entering a webhook URL. No secret is stored in this repository.

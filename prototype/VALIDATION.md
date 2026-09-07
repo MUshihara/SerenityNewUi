@@ -77,3 +77,6 @@ Patterns reviewed: WindUI's recent draggable-element improvements (https://githu
 - Sidebar navigation starts below the bar and now exposes a subtle scroll indicator. Section headers use readable 13px title case and an accent underline.
 - Feedback shows shared-destination availability before submission and a character counter; drafts remain in the form on failure. The shared relay is still NOT deployed, so fresh mobile devices cannot send reports yet.
 - Lua subset compilation and mocked desktop/mobile lifecycle tests pass. No Roblox rendering, device performance or live Discord delivery verified.
+
+## Phonk RC1 — default feedback destination
+Owner explicitly approved the direct public feedback destination. It now ships in the shared module; local destination files are not required. Fresh mobile http_request-only success/failure and draft retention pass mocked tests. UTF-8 character counting and whitespace cleanup added. No live Discord sends were performed. Real PC/mobile gameplay, delivery and soak acceptance remain pending; production is unchanged.

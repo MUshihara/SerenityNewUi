@@ -31,7 +31,7 @@ return function(ui,input,state,options,mobileLayout)
     local title=ui:Label(header,'About',16,UDim2.fromOffset(0,16),UDim2.new(1,-175,0,23),nil,true)
     local description=ui:Label(header,'Welcome to Serenity',10,UDim2.fromOffset(0,39),UDim2.new(1,-175,0,16),T.Muted)
     local badge=ui:Panel(brand,{Position=UDim2.new(1,-174,0,9),Size=UDim2.fromOffset(80,26),BackgroundColor3=T.Shell})
-    local badgeText=ui:Label(badge,'Preview',10); badgeText.TextXAlignment=Enum.TextXAlignment.Center
+    local badgeText=ui:Label(badge,'RC1 test',10); badgeText.TextXAlignment=Enum.TextXAlignment.Center
     local search=ui:Button(brand,'',{Position=UDim2.new(1,-88,0,2),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
     ui:Icon(search,'search',22,UDim2.fromOffset(9,9),T.Text)
     local minimize=ui:Button(brand,'',{Position=UDim2.new(1,-44,0,2),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})

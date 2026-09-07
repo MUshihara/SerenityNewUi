@@ -251,3 +251,25 @@ request=nil
 _G.SerenityFeedbackWebhook=nil
 nextPhonk:Destroy();assert(activeConnections==0,'Phonk UI connection leak')
 print('PASS: actual Phonk manifest controls '..count..'; callback wiring; OFF on restart; cleanup; settings separation.')
+
+-- Fresh mobile install: no local destination, no environment destination, http_request only.
+input.TouchEnabled=true
+local mobileReport=bridge.Build(manifest);flushDeferred()
+local attempted=0
+http_request=function(payload)
+    attempted=attempted+1
+    assert(payload.Url:match('^https://discord%.com/api/webhooks/'),'default destination absent')
+    return {StatusCode=500}
+end
+mobileReport.Feedback.Draft.Text='Fresh mobile feedback should keep this draft.'
+mobileReport.Feedback.Submit()
+assert(attempted==1 and mobileReport.Feedback.Draft.Text~='','mobile failure lost draft')
+mobileReport:Destroy()
+local cleanReport=bridge.Build(manifest);flushDeferred()
+http_request=function(payload) attempted=attempted+1;return {StatusCode=204} end
+cleanReport.Feedback.Draft.Text='  Fresh mobile feedback with whitespace.  '
+cleanReport.Feedback.Submit()
+assert(attempted==2 and cleanReport.Feedback.Draft.Text=='','fresh mobile success failed')
+cleanReport:Destroy();http_request=nil
+assert(activeConnections==0,'report cleanup leaked')
+print('PASS: fresh mobile default destination; http_request fallback; failed draft retention; successful submission cleanup (mock HTTP only).')
