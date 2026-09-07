@@ -70,3 +70,10 @@ Launcher is 56×56, stays visible when the window is open or minimized, toggles 
 Feedback destination setup removed from the normal form. Four categories are available. Existing locally configured owner endpoint remains supported; a shared FeedbackRelay endpoint is supported for future distribution. Relay source is prepared but not hosted; public owner routing is not yet operational.
 
 Patterns reviewed: WindUI's recent draggable-element improvements (https://github.com/Footagesus/WindUI/releases) and Rayfield configuration persistence (https://docs.sirius.menu/rayfield/getting-started). No code copied from those libraries.
+
+
+## September 7 — title bar update
+- Full-width 44px brand bar with search/minimize, accent divider, separate page heading; mobile hides the game subtitle and preview badge.
+- Sidebar navigation starts below the bar and now exposes a subtle scroll indicator. Section headers use readable 13px title case and an accent underline.
+- Feedback shows shared-destination availability before submission and a character counter; drafts remain in the form on failure. The shared relay is still NOT deployed, so fresh mobile devices cannot send reports yet.
+- Lua subset compilation and mocked desktop/mobile lifecycle tests pass. No Roblox rendering, device performance or live Discord delivery verified.

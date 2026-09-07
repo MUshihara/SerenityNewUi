@@ -12,12 +12,14 @@ return function(ui,input,state,options,mobileLayout)
     local shell=ui:Panel(holder,{Size=UDim2.fromScale(1,1),BackgroundColor3=T.Shell,ZIndex=2})
     local divider=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar,14),Size=UDim2.new(0,1,1,-28),BackgroundColor3=T.Line,BackgroundTransparency=0.1})
     local logo='rbxthumb://type=Asset&id=89023606689629&w=420&h=420'
-    local brand=ui:Frame(shell,{Size=UDim2.fromOffset(T.Sidebar,T.Header),Active=true})
-    ui:New('ImageLabel',brand,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(15,18),Size=UDim2.fromOffset(28,28),ScaleType=Enum.ScaleType.Fit})
-    local brandTitle=ui:Label(brand,'SERENITY HUB',13,UDim2.fromOffset(53,17),UDim2.new(1,-59,0,19),nil,true)
-    local subtitle=ui:Label(brand,'UI Playground',10,UDim2.fromOffset(53,38),UDim2.new(1,-59,0,15),T.Muted)
+    local brand=ui:Frame(shell,{Size=UDim2.new(1,0,0,44),Active=true})
+    local topLine=ui:Frame(brand,{Position=UDim2.new(0,12,1,-1),Size=UDim2.new(1,-24,0,1),BackgroundColor3=T.Accent,BackgroundTransparency=0.35})
+    ui:Accent(function(color) topLine.BackgroundColor3=color end)
+    ui:New('ImageLabel',brand,{Image=logo,BackgroundTransparency=1,Position=UDim2.fromOffset(14,6),Size=UDim2.fromOffset(32,32),ScaleType=Enum.ScaleType.Fit})
+    local brandTitle=ui:Label(brand,'SERENITY HUB',13,UDim2.fromOffset(54,12),UDim2.fromOffset(126,20),nil,true)
+    local subtitle=ui:Label(brand,'UI Playground',10,UDim2.fromOffset(190,14),UDim2.new(1,-370,0,18),T.Muted)
     local navigation=ui:New('ScrollingFrame',shell,{BackgroundTransparency=1,BorderSizePixel=0,Position=UDim2.fromOffset(14,76),Size=UDim2.new(0,T.Sidebar-27,1,-149),
-        CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=0})
+        CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollBarThickness=2,ScrollBarImageColor3=T.Muted})
     ui:List(navigation,5)
     local gameCard=ui:Panel(shell,{Position=UDim2.new(0,12,1,-65),Size=UDim2.fromOffset(T.Sidebar-24,53),BackgroundColor3=T.Shell})
     local gameImage=ui:New('ImageLabel',gameCard,{BackgroundColor3=T.Inset,BorderSizePixel=0,Position=UDim2.fromOffset(6,6),Size=UDim2.fromOffset(40,40),
@@ -28,11 +30,11 @@ return function(ui,input,state,options,mobileLayout)
     local header=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,0),Size=UDim2.new(1,-T.Sidebar-32,0,T.Header),Active=true})
     local title=ui:Label(header,'About',16,UDim2.fromOffset(0,16),UDim2.new(1,-175,0,23),nil,true)
     local description=ui:Label(header,'Welcome to Serenity',10,UDim2.fromOffset(0,39),UDim2.new(1,-175,0,16),T.Muted)
-    local badge=ui:Panel(header,{Position=UDim2.new(1,-172,0,19),Size=UDim2.fromOffset(80,26),BackgroundColor3=T.Shell})
+    local badge=ui:Panel(brand,{Position=UDim2.new(1,-174,0,9),Size=UDim2.fromOffset(80,26),BackgroundColor3=T.Shell})
     local badgeText=ui:Label(badge,'Preview',10); badgeText.TextXAlignment=Enum.TextXAlignment.Center
-    local search=ui:Button(header,'',{Position=UDim2.new(1,-84,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
+    local search=ui:Button(brand,'',{Position=UDim2.new(1,-88,0,2),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
     ui:Icon(search,'search',22,UDim2.fromOffset(9,9),T.Text)
-    local minimize=ui:Button(header,'',{Position=UDim2.new(1,-40,0,12),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
+    local minimize=ui:Button(brand,'',{Position=UDim2.new(1,-44,0,2),Size=UDim2.fromOffset(40,40),BackgroundTransparency=1})
     ui:Icon(minimize,'minus',22,UDim2.fromOffset(9,9),T.Muted)
     local content=ui:Frame(shell,{Position=UDim2.fromOffset(T.Sidebar+16,T.Header+9),Size=UDim2.new(1,-T.Sidebar-32,1,-T.Header-23)})
     local launcher=ui:Button(screen,'',{Position=UDim2.fromOffset(18,180),Size=UDim2.fromOffset(56,56),Visible=true,BackgroundColor3=T.Panel,ZIndex=4})
@@ -46,25 +48,26 @@ return function(ui,input,state,options,mobileLayout)
         local layout=mobile and mobileLayout(view) or {Width=T.Width,Height=T.Height,Sidebar=T.Sidebar,Header=T.Header,Rail=false}
         local compact=layout.Rail
         local width,height,sidebar=layout.Width,layout.Height,layout.Sidebar
-        local headerHeight=layout.Header
+        local topHeight=44
+        local headerHeight=mobile and 44 or 54
         self.Mobile=mobile
         self.LayoutWidth=width; self.LayoutHeight=height; self.SidebarWidth=sidebar
         holder.Size=UDim2.fromOffset(width,height)
         scale.Scale=math.max(0.2,math.min(desired/100,(view.X-24)/width,(view.Y-24)/height))
         ui.ScaleFactor=scale.Scale
-        divider.Position=UDim2.fromOffset(sidebar,14)
-        brand.Size=UDim2.fromOffset(sidebar,headerHeight); brandTitle.Visible=not compact; subtitle.Visible=not compact
+        divider.Position=UDim2.fromOffset(sidebar,topHeight+10); divider.Size=UDim2.new(0,1,1,-topHeight-22)
+        brand.Size=UDim2.new(1,0,0,topHeight); brandTitle.Visible=true; subtitle.Visible=not mobile
         navigation.Size=UDim2.new(0,sidebar-20,1,compact and -137 or -149)
-        navigation.Position=UDim2.fromOffset(10,headerHeight+5)
-        navigation.Size=UDim2.new(0,sidebar-20,1,-headerHeight-72)
+        navigation.Position=UDim2.fromOffset(10,topHeight+10)
+        navigation.Size=UDim2.new(0,sidebar-20,1,-topHeight-80)
         gameCard.Size=UDim2.fromOffset(sidebar-16,53); gameCard.Position=UDim2.new(0,8,1,-61)
         gameTitle.Visible=not compact; dot.Visible=not compact
         for _,child in ipairs(gameCard:GetChildren()) do if child:IsA('TextLabel') then child.Visible=not compact end end
-        header.Position=UDim2.fromOffset(sidebar+12,0); header.Size=UDim2.new(1,-sidebar-24,0,headerHeight)
+        header.Position=UDim2.fromOffset(sidebar+12,topHeight); header.Size=UDim2.new(1,-sidebar-24,0,headerHeight)
         badge.Visible=not mobile
-        title.Size=UDim2.new(1,mobile and -88 or -175,0,23)
-        description.Size=UDim2.new(1,mobile and -88 or -175,0,16)
-        content.Position=UDim2.fromOffset(sidebar+12,headerHeight+5); content.Size=UDim2.new(1,-sidebar-24,1,-headerHeight-17)
+        title.Position=UDim2.fromOffset(0,mobile and 10 or 6); title.Size=UDim2.new(1,0,0,23); title.TextSize=18
+        description.Position=UDim2.fromOffset(0,30); description.Size=UDim2.new(1,0,0,16); description.TextSize=11
+        content.Position=UDim2.fromOffset(sidebar+12,topHeight+headerHeight+5); content.Size=UDim2.new(1,-sidebar-24,1,-topHeight-headerHeight-17)
         for _,entry in pairs(self.Pages) do
             entry.Row.Size=UDim2.new(1,0,0,compact and 56 or 44)
             entry.Tile.Position=UDim2.fromOffset(compact and 7 or 0,compact and 0 or 5)

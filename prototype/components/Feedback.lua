@@ -17,17 +17,24 @@ return function(ui,app,parent,options,choice)
         return row
     end
     local category=choice(scroll,{Title='Report type',Options={'Bug Report','Feedback','New Feature','New Game Request'},Default='Bug Report'},false)
-    local draft=field('Bug report or feedback',176)
+    local draft=field('Bug report or feedback',202)
     local box=ui:New('TextBox',draft,{Position=UDim2.fromOffset(12,36),Size=UDim2.new(1,-24,0,128),Text='',PlaceholderText='What happened? What did you expect? Include steps to reproduce.',MultiLine=true,TextWrapped=true,TextXAlignment=Enum.TextXAlignment.Left,TextYAlignment=Enum.TextYAlignment.Top,ClearTextOnFocus=false,Font=ui.T.Font,TextSize=13,TextColor3=ui.T.Text,BackgroundColor3=ui.T.Inset,BorderSizePixel=0})
     ui:Round(box,6);ui:Pad(box,8)
+    local count=ui:Label(draft,'0 / 1800 characters',11,UDim2.fromOffset(12,174),UDim2.new(1,-24,0,18),ui.T.Muted)
+    ui.R:Connect(box:GetPropertyChangedSignal('Text'),function()
+        count.Text=tostring(#box.Text)..' / 1800 characters'
+        count.TextColor3=#box.Text>1800 and ui.T.Accent or ui.T.Muted
+    end)
     local context=field('Included with your report',108)
     ui:Label(context,'Game: '..tostring(options.Manifest and options.Manifest.GameName or app.GameTitle.Text)..'\nPlace: '..tostring(game.PlaceId)..'\nServer Job ID and preview version. No profile settings.',11,UDim2.fromOffset(12,34),UDim2.new(1,-24,0,66),ui.T.Muted).TextWrapped=true
-    local status=ui:Label(scroll,'Sends only when you press Submit.',12,nil,UDim2.new(1,0,0,36),ui.T.Muted)
+    local configured=relay or valid(endpoint)
+    local status=ui:Label(scroll,configured and 'Sends to Serenity when you press Submit.' or 'Shared reporting is awaiting server setup. Your draft stays here.',12,nil,UDim2.new(1,0,0,36),ui.T.Muted)
+    status.TextWrapped=true; status.TextTruncate=Enum.TextTruncate.None
     local busy,last=false,-math.huge
     local button
     local function submit()
         if busy then return end
-        if not relay and not valid(endpoint) then status.Text='Reporting is not configured in this build.';return end
+        if not relay and not valid(endpoint) then status.Text='Serenity’s report server is not connected yet. Your draft is safe.';return end
         local message=box.Text:match('^%s*(.-)%s*$')
         if #message<10 or #message>1800 then status.Text='Write between 10 and 1800 characters.';return end
         if os.clock()-last<30 then status.Text='Please wait 30 seconds between reports.';return end
@@ -53,6 +60,6 @@ return function(ui,app,parent,options,choice)
             end
         end)
     end
-    button=ui:Button(scroll,'Submit report',{Size=UDim2.new(1,0,0,44),BackgroundColor3=ui.T.Accent},submit)
+    button=ui:Button(scroll,configured and 'Submit report' or 'Reporting unavailable',{Size=UDim2.new(1,0,0,44),BackgroundColor3=ui.T.Accent},submit)
     app.Feedback={Submit=submit,Draft=box,Category=category,Status=status}
 end
