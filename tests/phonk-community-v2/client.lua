@@ -127,7 +127,7 @@ make("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.ne
 local status=label(panel,"Choose a language · Open chat to connect",UDim2.fromOffset(12,122),UDim2.new(1,-24,0,24),muted,11)
 local scroll=make("ScrollingFrame",{Name="MessageFeed",Position=UDim2.fromOffset(12,150),Size=UDim2.new(1,-24,1,-212),BackgroundColor3=Color3.fromRGB(13,14,21),BackgroundTransparency=0,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=Color3.fromRGB(71,73,95),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y},panel)
 corner(scroll,8);make("UIPadding",{PaddingTop=UDim.new(0,10),PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,8),PaddingBottom=UDim.new(0,10)},scroll)
-make("UIListLayout",{Padding=UDim.new(0,12),SortOrder=Enum.SortOrder.LayoutOrder},scroll)
+make("UIListLayout",{Padding=UDim.new(0,7),SortOrder=Enum.SortOrder.LayoutOrder},scroll)
 local input=make("TextBox",{Position=UDim2.new(0,12,1,-50),Size=UDim2.new(1,-94,0,40),Text="",PlaceholderText="Message the live global chat…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(30,30,41),TextColor3=white,PlaceholderColor3=muted,TextSize=13,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,BorderSizePixel=0},panel)
 corner(input,7)
 make("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8)},input)
@@ -174,26 +174,31 @@ local function render(force)
         local gameName=tostring(m.gameName or "Global")
         if query=="" or (name.." "..gameName.." "..text):lower():find(query,1,true) then
             shown=shown+1
-            local width=math.max(100,scroll.AbsoluteSize.X-98)
-            local bounds=TextService:GetTextSize(text,14,Enum.Font.Gotham,Vector2.new(width,10000))
-            local height=math.max(78,bounds.Y+56)
-            local row=make("Frame",{Name="MessageRow",Size=UDim2.new(1,-4,0,height),BackgroundTransparency=0,BackgroundColor3=m.system==true and Color3.fromRGB(29,26,39) or Color3.fromRGB(23,25,35),BorderSizePixel=0,LayoutOrder=i},scroll)
-            corner(row,10)
             local uid=tonumber(m.userId)
+            local own=m.system~=true and uid~=nil and uid==tonumber(player.UserId)
+            local available=math.max(100,scroll.AbsoluteSize.X-28)
+            local maximum=math.max(70,math.floor(available*0.84)-36)
+            local natural=TextService:GetTextSize(text,13,Enum.Font.Gotham,Vector2.new(10000,10000))
+            local bubbleWidth=math.min(maximum,math.max(150,(natural.X or maximum)+20))
+            local bounds=TextService:GetTextSize(text,13,Enum.Font.Gotham,Vector2.new(math.max(40,bubbleWidth-20),10000))
+            local height=bounds.Y+44
+            local row=make("Frame",{Name="MessageRow",Size=UDim2.new(1,-4,0,height),BackgroundTransparency=1,BorderSizePixel=0,LayoutOrder=i},scroll)
+            local bubble=make("Frame",{Name=own and "OutgoingBubble" or "IncomingBubble",AnchorPoint=Vector2.new(own and 1 or 0,0),Position=own and UDim2.new(1,-34,0,0) or UDim2.fromOffset(34,0),Size=UDim2.fromOffset(bubbleWidth,height),BackgroundColor3=own and Color3.fromRGB(51,38,72) or Color3.fromRGB(25,26,36),BorderSizePixel=0},row)
+            corner(bubble,8)
             local image=(uid and uid>0) and ("rbxthumb://type=AvatarHeadShot&id="..string.format("%.0f",uid).."&w=48&h=48") or "rbxassetid://10709790644"
-            local avatar=make("ImageLabel",{Size=UDim2.fromOffset(32,32),Position=UDim2.fromOffset(10,12),BackgroundColor3=Color3.fromRGB(26,29,41),Image=image,BorderSizePixel=0},row)
-            corner(avatar,15);make("UIStroke",{Color=Color3.fromRGB(54,58,79),Thickness=1},avatar)
+            local avatar=make("ImageLabel",{Size=UDim2.fromOffset(26,26),Position=own and UDim2.new(1,-26,0,2) or UDim2.fromOffset(0,2),BackgroundColor3=Color3.fromRGB(26,29,41),Image=image,BorderSizePixel=0},row)
+            corner(avatar,13)
             local role=m.system==true and "SYSTEM" or tostring(m.role or ""):upper()
             if role~="OWNER" and role~="ADMIN" and role~="DEV" and role~="SYSTEM" then role="" end
-            local roleColor=role=="SYSTEM" and "#FFC061" or role=="OWNER" and "#F4CE67" or role=="ADMIN" and "#6BCCF2" or "#C59AF3"
-            local badge=role~="" and ('<font color="'..roleColor..'"><b>['..role..']</b></font>  ') or ""
-            local header=label(row,badge..'<font color="#C5A4F4"><b>'..Core.Escape(name)..'</b></font>',UDim2.fromOffset(52,10),UDim2.new(1,-64,0,18),white,13)
+            local badge=role~="" and ('<font color="#C59AF3">'..role..'</font> · ') or ""
+            local header=label(bubble,badge..'<b>'..Core.Escape(name)..'</b>',UDim2.fromOffset(10,5),UDim2.new(1,-20,0,15),purple,11)
             header.RichText=true;header.TextWrapped=false;header.TextTruncate=Enum.TextTruncate.AtEnd
-            local meta=gameName..(m.time and (' · '..tostring(m.time)) or '')..(translated and ' · translated' or '')
-            local details=label(row,meta,UDim2.fromOffset(52,29),UDim2.new(1,-64,0,16),translated and Color3.fromRGB(104,189,218) or muted,10)
-            details.TextWrapped=false;details.TextTruncate=Enum.TextTruncate.AtEnd
-            local body=label(row,text,UDim2.fromOffset(52,48),UDim2.new(1,-64,0,bounds.Y+2),white,14)
+            local body=label(bubble,text,UDim2.fromOffset(10,22),UDim2.new(1,-20,0,bounds.Y+2),white,13)
             body.TextYAlignment=Enum.TextYAlignment.Top
+            local meta=(m.time and tostring(m.time) or gameName)..(translated and ' · translated' or '')
+            local details=label(bubble,meta,UDim2.fromOffset(10,height-17),UDim2.new(1,-20,0,12),muted,9)
+            details.TextWrapped=false;details.TextTruncate=Enum.TextTruncate.AtEnd
+
         end
     end
     if shown==0 then

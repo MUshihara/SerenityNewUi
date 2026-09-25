@@ -68,3 +68,6 @@ and mute status use the existing responses; no extra counter polling is introduc
 
 ### Message card refresh
 Opaque message cards, larger message text, full-width search and an overflow menu for test controls. User display names mask their second half with asterisks (Unicode-aware); search uses masked names. This is display-only masking, not backend anonymization. System messages retain the Serenity System label.
+
+### Compact conversation bubbles
+Content-sized bubbles replace full-width cards. Current account messages align right by numeric userId; all others and system messages align left. Smaller avatars, padding and metadata keep more messages visible.

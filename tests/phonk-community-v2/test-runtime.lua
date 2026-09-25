@@ -33,7 +33,7 @@ request=function(r)
  requests[#requests+1]=r
  local data
  if r.Url:find('/moderation/')then data={success=true,warning=warning}
- elseif r.Url:find('/chat/messages')then data={success=true,messages={{id=1,userId='123',displayName='<Admin>',role='Dev',gameName='Phonk',message='Hello',translations={fil='Kumusta'}}}}
+ elseif r.Url:find('/chat/messages')then data={success=true,messages={{id=1,userId='123',displayName='<Admin>',role='Dev',gameName='Phonk',message='Hello',translations={fil='Kumusta'}},{id=2,userId='456',displayName='OtherUser',message='Hi'}}}
  else data={id='unrelated',active=true,target='everyone',targetPlaceId='999',message='Wrong game'}end
  index=index+1;responseMap[tostring(index)]=data;return {StatusCode=200,Body=tostring(index)}
 end
@@ -65,6 +65,12 @@ assert(#requests==1 and requests[1].Url:find('/announcements/')) -- closed chat 
 local function find(text)for i=#nodes,1,-1 do local n=nodes[i];if n.Parent and n.Text==text then return n end end end
 nav:FindFirstChild('SerenityGlobalChatTest').Activated:Fire();tick();tick();assert(heading.Text=='Global Chat' and not aboutPage.Visible)
 assert(#requests>=3)
+local outgoing,incoming=false,false
+for _,n in ipairs(nodes) do
+ if n.Parent and n.Name=='OutgoingBubble' then outgoing=true;assert(n.AnchorPoint.X==1 and n.Position.X.Scale==1) end
+ if n.Parent and n.Name=='IncomingBubble' then incoming=true;assert(n.AnchorPoint.X==0 and n.Position.X.Scale==0) end
+end
+assert(outgoing and incoming,'own messages right and other accounts left')
 assert(env.__SERENITY_COMMUNITY_SEEN['warning:one'])
 find('Filipino').Activated:Fire();tick();assert(find('Kumusta'))
 find('Filipino').Activated:Fire();assert(find('Kumusta')) -- clicking selected tab does not cycle
