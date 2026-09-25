@@ -65,3 +65,6 @@ Message rows include avatars, escaped role/name headings, game/time metadata and
 translation indicators. Search filters the already-loaded messages locally. No owner
 console, delete-message or moderation privileges are added to the client. Connection
 and mute status use the existing responses; no extra counter polling is introduced.
+
+### Message card refresh
+Opaque message cards, larger message text, full-width search and an overflow menu for test controls. User display names mask their second half with asterisks (Unicode-aware); search uses masked names. This is display-only masking, not backend anonymization. System messages retain the Serenity System label.

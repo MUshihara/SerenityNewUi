@@ -106,26 +106,32 @@ spawn(function()
     end
 end)
 local panel=make("Frame",{AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-12,1,-56),Size=UDim2.fromOffset(440,400),BackgroundColor3=bg,BorderSizePixel=0,Visible=false},gui)
-corner(panel)
+corner(panel,12)
+panel.BackgroundTransparency=0
 local purple=Color3.fromRGB(187,151,242)
 make("UIStroke",{Color=Color3.fromRGB(47,48,64),Thickness=1},panel)
-local network=label(panel,"○  Community",UDim2.fromOffset(12,8),UDim2.new(1,-172,0,24),Color3.fromRGB(105,219,169),13)
+local network=label(panel,"○  Community",UDim2.fromOffset(12,8),UDim2.new(1,-100,0,24),Color3.fromRGB(105,219,169),13)
 network.Font=Enum.Font.GothamBold
-local close=button(panel,"About",UDim2.new(1,-64,0,6),UDim2.fromOffset(54,28))
-local stop=button(panel,"Stop test",UDim2.new(1,-152,0,6),UDim2.fromOffset(80,28))
-local search=make("TextBox",{Name="ChatSearch",Position=UDim2.fromOffset(12,42),Size=UDim2.new(1,-150,0,30),Text="",PlaceholderText="Search messages or users…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(25,26,36),TextColor3=white,PlaceholderColor3=muted,TextSize=12,Font=Enum.Font.Gotham,BorderSizePixel=0,TextXAlignment=Enum.TextXAlignment.Left},panel)
+local toolsPanel=make("Frame",{Name="TestTools",Visible=false,Position=UDim2.new(1,-166,0,38),Size=UDim2.fromOffset(154,110),BackgroundColor3=bg,BorderSizePixel=0,ZIndex=20},panel)
+corner(toolsPanel,8)
+local menu=button(panel,"•••",UDim2.new(1,-52,0,8),UDim2.fromOffset(40,28))
+connect(menu.Activated,function() toolsPanel.Visible=not toolsPanel.Visible end)
+local close=button(toolsPanel,"About",UDim2.fromOffset(8,6),UDim2.fromOffset(138,28))
+local stop=button(toolsPanel,"Stop test",UDim2.fromOffset(8,40),UDim2.fromOffset(138,28))
+local search=make("TextBox",{Name="ChatSearch",Position=UDim2.fromOffset(12,42),Size=UDim2.new(1,-24,0,32),Text="",PlaceholderText="Search messages or users…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(25,26,36),TextColor3=white,PlaceholderColor3=muted,TextSize=12,Font=Enum.Font.Gotham,BorderSizePixel=0,TextXAlignment=Enum.TextXAlignment.Left},panel)
 corner(search,6);make("UIPadding",{PaddingLeft=UDim.new(0,10)},search)
-local preview=button(panel,"Test warning",UDim2.new(1,-128,0,42),UDim2.fromOffset(116,30))
-local tabs=make("ScrollingFrame",{Name="LanguageTabs",Position=UDim2.fromOffset(12,82),Size=UDim2.new(1,-24,0,38),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=2,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.X,ScrollingDirection=Enum.ScrollingDirection.X},panel)
+local preview=button(toolsPanel,"Test warning",UDim2.fromOffset(8,74),UDim2.fromOffset(138,28))
+close.ZIndex=21;stop.ZIndex=21;preview.ZIndex=21
+local tabs=make("ScrollingFrame",{Name="LanguageTabs",Position=UDim2.fromOffset(12,84),Size=UDim2.new(1,-24,0,38),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=2,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.X,ScrollingDirection=Enum.ScrollingDirection.X},panel)
 make("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},tabs)
-local status=label(panel,"Choose a language · Open chat to connect",UDim2.fromOffset(12,124),UDim2.new(1,-24,0,24),muted,11)
-local scroll=make("ScrollingFrame",{Name="MessageFeed",Position=UDim2.fromOffset(12,154),Size=UDim2.new(1,-24,1,-211),BackgroundColor3=Color3.fromRGB(13,14,21),BackgroundTransparency=0,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=Color3.fromRGB(71,73,95),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y},panel)
+local status=label(panel,"Choose a language · Open chat to connect",UDim2.fromOffset(12,122),UDim2.new(1,-24,0,24),muted,11)
+local scroll=make("ScrollingFrame",{Name="MessageFeed",Position=UDim2.fromOffset(12,150),Size=UDim2.new(1,-24,1,-212),BackgroundColor3=Color3.fromRGB(13,14,21),BackgroundTransparency=0,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=Color3.fromRGB(71,73,95),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y},panel)
 corner(scroll,8);make("UIPadding",{PaddingTop=UDim.new(0,10),PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,8),PaddingBottom=UDim.new(0,10)},scroll)
 make("UIListLayout",{Padding=UDim.new(0,12),SortOrder=Enum.SortOrder.LayoutOrder},scroll)
-local input=make("TextBox",{Position=UDim2.new(0,12,1,-45),Size=UDim2.new(1,-94,0,34),Text="",PlaceholderText="Message the live global chat…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(30,30,41),TextColor3=white,PlaceholderColor3=muted,TextSize=13,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,BorderSizePixel=0},panel)
+local input=make("TextBox",{Position=UDim2.new(0,12,1,-50),Size=UDim2.new(1,-94,0,40),Text="",PlaceholderText="Message the live global chat…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(30,30,41),TextColor3=white,PlaceholderColor3=muted,TextSize=13,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,BorderSizePixel=0},panel)
 corner(input,7)
 make("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8)},input)
-local sendButton=button(panel,"Send",UDim2.new(1,-74,1,-45),UDim2.fromOffset(62,34))
+local sendButton=button(panel,"Send",UDim2.new(1,-74,1,-50),UDim2.fromOffset(62,40))
 sendButton.BackgroundColor3=Color3.fromRGB(229,223,247);sendButton.TextColor3=Color3.fromRGB(29,23,44);sendButton.Font=Enum.Font.GothamBold
 local function resize() fitBanner() end
 local cameraConnection
@@ -143,6 +149,14 @@ connect(preview.Activated,function() notify("Community warning · Preview","Plea
 local rooms={{"English","en","General"},{"spanish","es","Spanish"},{"indonesian","id","Indonesian"},{"philippines","fil","Filipino"},{"vietnam","vi","Vietnamese"},{"brazilian","pt","Portuguese"}}
 local roomIndex=1
 local messages,ids,cursor={}, {},0
+local function maskName(value)
+    local name=tostring(value or "User")
+    local ok,count=pcall(utf8.len,name)
+    if not ok or not count then return "User****" end
+    local keep=math.floor(count/2)
+    local cut=keep>0 and utf8.offset(name,keep+1) or 1
+    return name:sub(1,cut-1)..string.rep("*",count-keep)
+end
 local function render(force)
     local lang=rooms[roomIndex][2]
     local query=search.Text:lower()
@@ -156,28 +170,29 @@ local function render(force)
         if type(m.translations)=="table" and type(m.translations[lang])=="string" and m.translations[lang]~="" then
             translated=m.translations[lang]~=text;text=m.translations[lang]
         end
-        local name=tostring(m.displayName or m.username or "User")
+        local name=m.system==true and "Serenity System" or maskName(m.displayName or m.username or "User")
         local gameName=tostring(m.gameName or "Global")
         if query=="" or (name.." "..gameName.." "..text):lower():find(query,1,true) then
             shown=shown+1
-            local width=math.max(100,scroll.AbsoluteSize.X-78)
-            local bounds=TextService:GetTextSize(text,13,Enum.Font.Gotham,Vector2.new(width,10000))
-            local height=math.max(56,bounds.Y+40)
-            local row=make("Frame",{Name="MessageRow",Size=UDim2.new(1,-4,0,height),BackgroundTransparency=1,LayoutOrder=i},scroll)
+            local width=math.max(100,scroll.AbsoluteSize.X-98)
+            local bounds=TextService:GetTextSize(text,14,Enum.Font.Gotham,Vector2.new(width,10000))
+            local height=math.max(78,bounds.Y+56)
+            local row=make("Frame",{Name="MessageRow",Size=UDim2.new(1,-4,0,height),BackgroundTransparency=0,BackgroundColor3=m.system==true and Color3.fromRGB(29,26,39) or Color3.fromRGB(23,25,35),BorderSizePixel=0,LayoutOrder=i},scroll)
+            corner(row,10)
             local uid=tonumber(m.userId)
             local image=(uid and uid>0) and ("rbxthumb://type=AvatarHeadShot&id="..string.format("%.0f",uid).."&w=48&h=48") or "rbxassetid://10709790644"
-            local avatar=make("ImageLabel",{Size=UDim2.fromOffset(30,30),Position=UDim2.fromOffset(0,2),BackgroundColor3=Color3.fromRGB(26,29,41),Image=image,BorderSizePixel=0},row)
+            local avatar=make("ImageLabel",{Size=UDim2.fromOffset(32,32),Position=UDim2.fromOffset(10,12),BackgroundColor3=Color3.fromRGB(26,29,41),Image=image,BorderSizePixel=0},row)
             corner(avatar,15);make("UIStroke",{Color=Color3.fromRGB(54,58,79),Thickness=1},avatar)
             local role=m.system==true and "SYSTEM" or tostring(m.role or ""):upper()
             if role~="OWNER" and role~="ADMIN" and role~="DEV" and role~="SYSTEM" then role="" end
             local roleColor=role=="SYSTEM" and "#FFC061" or role=="OWNER" and "#F4CE67" or role=="ADMIN" and "#6BCCF2" or "#C59AF3"
             local badge=role~="" and ('<font color="'..roleColor..'"><b>['..role..']</b></font>  ') or ""
-            local header=label(row,badge..'<font color="#C5A4F4"><b>'..Core.Escape(name)..'</b></font>',UDim2.fromOffset(40,0),UDim2.new(1,-42,0,18),white,12)
+            local header=label(row,badge..'<font color="#C5A4F4"><b>'..Core.Escape(name)..'</b></font>',UDim2.fromOffset(52,10),UDim2.new(1,-64,0,18),white,13)
             header.RichText=true;header.TextWrapped=false;header.TextTruncate=Enum.TextTruncate.AtEnd
             local meta=gameName..(m.time and (' · '..tostring(m.time)) or '')..(translated and ' · translated' or '')
-            local details=label(row,meta,UDim2.fromOffset(40,18),UDim2.new(1,-42,0,16),translated and Color3.fromRGB(104,189,218) or muted,10)
+            local details=label(row,meta,UDim2.fromOffset(52,29),UDim2.new(1,-64,0,16),translated and Color3.fromRGB(104,189,218) or muted,10)
             details.TextWrapped=false;details.TextTruncate=Enum.TextTruncate.AtEnd
-            local body=label(row,text,UDim2.fromOffset(40,36),UDim2.new(1,-42,0,bounds.Y+2),white,13)
+            local body=label(row,text,UDim2.fromOffset(52,48),UDim2.new(1,-64,0,bounds.Y+2),white,14)
             body.TextYAlignment=Enum.TextYAlignment.Top
         end
     end
@@ -195,7 +210,7 @@ local roomButtons={}
 local function selectRoom(index)
     roomIndex=index
     for i,b in ipairs(roomButtons) do
-        b.BackgroundColor3=i==index and Color3.fromRGB(63,49,86) or Color3.fromRGB(27,28,39)
+        b.BackgroundColor3=i==index and Color3.fromRGB(102,73,153) or Color3.fromRGB(27,28,39)
         b.TextColor3=i==index and white or muted
         b.Font=i==index and Enum.Font.GothamBold or Enum.Font.Gotham
     end

@@ -69,6 +69,9 @@ assert(env.__SERENITY_COMMUNITY_SEEN['warning:one'])
 find('Filipino').Activated:Fire();tick();assert(find('Kumusta'))
 find('Filipino').Activated:Fire();assert(find('Kumusta')) -- clicking selected tab does not cycle
 find('General').Activated:Fire();assert(find('Hello'))
+local masked=false
+for _,n in ipairs(nodes) do if n.Parent and n.RichText and type(n.Text)=='string' then assert(not n.Text:find('&lt;Admin&gt;',1,true));if n.Text:find('&lt;Ad****',1,true) then masked=true end end end
+assert(masked,'display name must mask its second half')
 assert(find('[DEV]')==nil) -- badge is formatted safely in the header
 for _,n in ipairs(nodes)do if n.Parent and n.Name=='ChatSearch' then n.Text='nomatch';n:GetPropertyChangedSignal('Text'):Fire();assert(find('No matching messages'));n.Text='';n:GetPropertyChangedSignal('Text'):Fire()end end
 for _,n in ipairs(nodes)do assert(n.ClassName~='BlurEffect')end
