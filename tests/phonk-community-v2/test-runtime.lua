@@ -17,8 +17,8 @@ function methods:FindFirstChildWhichIsA(class,recursive)for _,c in ipairs(self:G
 function methods:Clone()local n=Instance.new(self.ClassName);for k,v in pairs(self)do if k~='Parent' and k~='signals' and type(v)~='table' then n[k]=v end end;for _,k in ipairs({'Size','Position'})do n[k]=self[k]end;for _,c in ipairs(self:GetChildren())do local child=c:Clone();child.Parent=n end;return n end
 function methods:Destroy()for _,c in ipairs(self:GetChildren())do c:Destroy()end;self.Parent=nil end
 function methods:GetPropertyChangedSignal(k)self.signals=self.signals or {};self.signals[k]=self.signals[k] or signal();return self.signals[k] end
-Instance={new=function(class)local o={ClassName=class,Visible=true,Enabled=true,Size=UDim2.new(),Position=UDim2.new(),LayoutOrder=0};setmetatable(o,{__index=function(t,k)if methods[k]then return methods[k]end;if k=='Activated' or k=='FocusLost' or k=='Destroying' then local s=signal();rawset(t,k,s);return s end end});nodes[#nodes+1]=o;return o end}
-local function vec(...)return {...}end
+Instance={new=function(class)local o={CanvasPosition={X=0,Y=0},AbsoluteCanvasSize={X=420,Y=200},AbsoluteSize={X=420,Y=220},ClassName=class,Visible=true,Enabled=true,Size=UDim2.new(),Position=UDim2.new(),LayoutOrder=0};setmetatable(o,{__index=function(t,k)if methods[k]then return methods[k]end;if k=='Activated' or k=='FocusLost' or k=='Destroying' then local s=signal();rawset(t,k,s);return s end end});nodes[#nodes+1]=o;return o end}
+local function vec(x,y,...)return {X=x,Y=y,x,y,...}end
 UDim={new=vec};UDim2={new=function(a,b,c,d)return {X={Scale=a or 0,Offset=b or 0},Y={Scale=c or 0,Offset=d or 0}}end};UDim2.fromOffset=function(x,y)return UDim2.new(0,x,0,y)end;UDim2.fromScale=function(x,y)return UDim2.new(x,0,y,0)end;Vector2={new=vec};Color3={fromRGB=vec}
 Enum=setmetatable({},{__index=function(t,k)local v=setmetatable({},{__index=function(_,x)return x end});rawset(t,k,v);return v end})
 local camera=Instance.new('Camera');camera.ViewportSize={X=360,Y=740}
@@ -33,7 +33,7 @@ request=function(r)
  requests[#requests+1]=r
  local data
  if r.Url:find('/moderation/')then data={success=true,warning=warning}
- elseif r.Url:find('/chat/messages')then data={success=true,messages={}}
+ elseif r.Url:find('/chat/messages')then data={success=true,messages={{id=1,userId='123',displayName='<Admin>',role='Dev',gameName='Phonk',message='Hello',translations={fil='Kumusta'}}}}
  else data={id='unrelated',active=true,target='everyone',targetPlaceId='999',message='Wrong game'}end
  index=index+1;responseMap[tostring(index)]=data;return {StatusCode=200,Body=tostring(index)}
 end
@@ -66,6 +66,11 @@ local function find(text)for i=#nodes,1,-1 do local n=nodes[i];if n.Parent and n
 nav:FindFirstChild('SerenityGlobalChatTest').Activated:Fire();tick();tick();assert(heading.Text=='Global Chat' and not aboutPage.Visible)
 assert(#requests>=3)
 assert(env.__SERENITY_COMMUNITY_SEEN['warning:one'])
+find('Filipino').Activated:Fire();tick();assert(find('Kumusta'))
+find('Filipino').Activated:Fire();assert(find('Kumusta')) -- clicking selected tab does not cycle
+find('General').Activated:Fire();assert(find('Hello'))
+assert(find('[DEV]')==nil) -- badge is formatted safely in the header
+for _,n in ipairs(nodes)do if n.Parent and n.Name=='ChatSearch' then n.Text='nomatch';n:GetPropertyChangedSignal('Text'):Fire();assert(find('No matching messages'));n.Text='';n:GetPropertyChangedSignal('Text'):Fire()end end
 for _,n in ipairs(nodes)do assert(n.ClassName~='BlurEffect')end
 holder.Visible=false;holder:GetPropertyChangedSignal('Visible'):Fire();assert(not a.opened)
 holder.Visible=true;holder:GetPropertyChangedSignal('Visible'):Fire();assert(a.opened)

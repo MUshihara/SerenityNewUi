@@ -107,18 +107,26 @@ spawn(function()
 end)
 local panel=make("Frame",{AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-12,1,-56),Size=UDim2.fromOffset(440,400),BackgroundColor3=bg,BorderSizePixel=0,Visible=false},gui)
 corner(panel)
-label(panel,"LIVE COMMUNITY",UDim2.fromOffset(12,8),UDim2.new(1,-180,0,24),white,13)
-local close=button(panel,"About",UDim2.new(1,-64,0,6),UDim2.fromOffset(54,30))
-local room=button(panel,"English",UDim2.fromOffset(12,38),UDim2.fromOffset(112,30))
-local preview=button(panel,"Test warning",UDim2.fromOffset(132,38),UDim2.fromOffset(114,30))
-local stop=button(panel,"Stop test",UDim2.new(1,-152,0,6),UDim2.fromOffset(80,30))
-local status=label(panel,"Open chat to connect.",UDim2.fromOffset(12,72),UDim2.new(1,-24,0,32),muted,12)
-local scroll=make("ScrollingFrame",{Position=UDim2.fromOffset(12,108),Size=UDim2.new(1,-24,1,-165),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=4,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y},panel)
-make("UIListLayout",{Padding=UDim.new(0,8),SortOrder=Enum.SortOrder.LayoutOrder},scroll)
+local purple=Color3.fromRGB(187,151,242)
+make("UIStroke",{Color=Color3.fromRGB(47,48,64),Thickness=1},panel)
+local network=label(panel,"○  Community",UDim2.fromOffset(12,8),UDim2.new(1,-172,0,24),Color3.fromRGB(105,219,169),13)
+network.Font=Enum.Font.GothamBold
+local close=button(panel,"About",UDim2.new(1,-64,0,6),UDim2.fromOffset(54,28))
+local stop=button(panel,"Stop test",UDim2.new(1,-152,0,6),UDim2.fromOffset(80,28))
+local search=make("TextBox",{Name="ChatSearch",Position=UDim2.fromOffset(12,42),Size=UDim2.new(1,-150,0,30),Text="",PlaceholderText="Search messages or users…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(25,26,36),TextColor3=white,PlaceholderColor3=muted,TextSize=12,Font=Enum.Font.Gotham,BorderSizePixel=0,TextXAlignment=Enum.TextXAlignment.Left},panel)
+corner(search,6);make("UIPadding",{PaddingLeft=UDim.new(0,10)},search)
+local preview=button(panel,"Test warning",UDim2.new(1,-128,0,42),UDim2.fromOffset(116,30))
+local tabs=make("ScrollingFrame",{Name="LanguageTabs",Position=UDim2.fromOffset(12,82),Size=UDim2.new(1,-24,0,38),BackgroundTransparency=1,BorderSizePixel=0,ScrollBarThickness=2,CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.X,ScrollingDirection=Enum.ScrollingDirection.X},panel)
+make("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder},tabs)
+local status=label(panel,"Choose a language · Open chat to connect",UDim2.fromOffset(12,124),UDim2.new(1,-24,0,24),muted,11)
+local scroll=make("ScrollingFrame",{Name="MessageFeed",Position=UDim2.fromOffset(12,154),Size=UDim2.new(1,-24,1,-211),BackgroundColor3=Color3.fromRGB(13,14,21),BackgroundTransparency=0,BorderSizePixel=0,ScrollBarThickness=3,ScrollBarImageColor3=Color3.fromRGB(71,73,95),CanvasSize=UDim2.new(),AutomaticCanvasSize=Enum.AutomaticSize.Y},panel)
+corner(scroll,8);make("UIPadding",{PaddingTop=UDim.new(0,10),PaddingLeft=UDim.new(0,10),PaddingRight=UDim.new(0,8),PaddingBottom=UDim.new(0,10)},scroll)
+make("UIListLayout",{Padding=UDim.new(0,12),SortOrder=Enum.SortOrder.LayoutOrder},scroll)
 local input=make("TextBox",{Position=UDim2.new(0,12,1,-45),Size=UDim2.new(1,-94,0,34),Text="",PlaceholderText="Message the live global chat…",ClearTextOnFocus=false,BackgroundColor3=Color3.fromRGB(30,30,41),TextColor3=white,PlaceholderColor3=muted,TextSize=13,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,BorderSizePixel=0},panel)
 corner(input,7)
 make("UIPadding",{PaddingLeft=UDim.new(0,8),PaddingRight=UDim.new(0,8)},input)
 local sendButton=button(panel,"Send",UDim2.new(1,-74,1,-45),UDim2.fromOffset(62,34))
+sendButton.BackgroundColor3=Color3.fromRGB(229,223,247);sendButton.TextColor3=Color3.fromRGB(29,23,44);sendButton.Font=Enum.Font.GothamBold
 local function resize() fitBanner() end
 local cameraConnection
 local function watchCamera()
@@ -132,20 +140,76 @@ connect(host.Screen.Destroying,function()S:Stop()end)
 connect(close.Activated,function()S.bridge.Close()end)
 connect(stop.Activated,function() S:Stop() end)
 connect(preview.Activated,function() notify("Community warning · Preview","Please keep the chat respectful. This preview is visible only to you.",8,true) end)
-local rooms={{"English","en"},{"spanish","es"},{"indonesian","id"},{"philippines","fil"},{"vietnam","vi"},{"brazilian","pt"}}
+local rooms={{"English","en","General"},{"spanish","es","Spanish"},{"indonesian","id","Indonesian"},{"philippines","fil","Filipino"},{"vietnam","vi","Vietnamese"},{"brazilian","pt","Portuguese"}}
 local roomIndex=1
 local messages,ids,cursor={}, {},0
-local function render()
-    for _,child in ipairs(scroll:GetChildren()) do if child:IsA("TextLabel") then child:Destroy() end end
+local function render(force)
     local lang=rooms[roomIndex][2]
+    local query=search.Text:lower()
+    local nearBottom=scroll.CanvasPosition.Y>=math.max(0,scroll.AbsoluteCanvasSize.Y-scroll.AbsoluteSize.Y-60)
+    local position=scroll.CanvasPosition
+    for _,child in ipairs(scroll:GetChildren()) do if child.Name=="MessageRow" or child.Name=="ChatEmpty" then child:Destroy() end end
+    local shown=0
     for i,m in ipairs(messages) do
         local text=tostring(m.message or "")
-        if type(m.translations)=="table" and type(m.translations[lang])=="string" then text=m.translations[lang] end
-        local row=label(scroll,tostring(m.displayName or m.username or "User").." · "..tostring(m.gameName or "").."\n"..text,UDim2.new(),UDim2.new(1,-8,0,0),white,13)
-        row.AutomaticSize=Enum.AutomaticSize.Y;row.LayoutOrder=i;row.TextYAlignment=Enum.TextYAlignment.Top
+        local translated=false
+        if type(m.translations)=="table" and type(m.translations[lang])=="string" and m.translations[lang]~="" then
+            translated=m.translations[lang]~=text;text=m.translations[lang]
+        end
+        local name=tostring(m.displayName or m.username or "User")
+        local gameName=tostring(m.gameName or "Global")
+        if query=="" or (name.." "..gameName.." "..text):lower():find(query,1,true) then
+            shown=shown+1
+            local width=math.max(100,scroll.AbsoluteSize.X-78)
+            local bounds=TextService:GetTextSize(text,13,Enum.Font.Gotham,Vector2.new(width,10000))
+            local height=math.max(56,bounds.Y+40)
+            local row=make("Frame",{Name="MessageRow",Size=UDim2.new(1,-4,0,height),BackgroundTransparency=1,LayoutOrder=i},scroll)
+            local uid=tonumber(m.userId)
+            local image=(uid and uid>0) and ("rbxthumb://type=AvatarHeadShot&id="..string.format("%.0f",uid).."&w=48&h=48") or "rbxassetid://10709790644"
+            local avatar=make("ImageLabel",{Size=UDim2.fromOffset(30,30),Position=UDim2.fromOffset(0,2),BackgroundColor3=Color3.fromRGB(26,29,41),Image=image,BorderSizePixel=0},row)
+            corner(avatar,15);make("UIStroke",{Color=Color3.fromRGB(54,58,79),Thickness=1},avatar)
+            local role=m.system==true and "SYSTEM" or tostring(m.role or ""):upper()
+            if role~="OWNER" and role~="ADMIN" and role~="DEV" and role~="SYSTEM" then role="" end
+            local roleColor=role=="SYSTEM" and "#FFC061" or role=="OWNER" and "#F4CE67" or role=="ADMIN" and "#6BCCF2" or "#C59AF3"
+            local badge=role~="" and ('<font color="'..roleColor..'"><b>['..role..']</b></font>  ') or ""
+            local header=label(row,badge..'<font color="#C5A4F4"><b>'..Core.Escape(name)..'</b></font>',UDim2.fromOffset(40,0),UDim2.new(1,-42,0,18),white,12)
+            header.RichText=true;header.TextWrapped=false;header.TextTruncate=Enum.TextTruncate.AtEnd
+            local meta=gameName..(m.time and (' · '..tostring(m.time)) or '')..(translated and ' · translated' or '')
+            local details=label(row,meta,UDim2.fromOffset(40,18),UDim2.new(1,-42,0,16),translated and Color3.fromRGB(104,189,218) or muted,10)
+            details.TextWrapped=false;details.TextTruncate=Enum.TextTruncate.AtEnd
+            local body=label(row,text,UDim2.fromOffset(40,36),UDim2.new(1,-42,0,bounds.Y+2),white,13)
+            body.TextYAlignment=Enum.TextYAlignment.Top
+        end
     end
+    if shown==0 then
+        local empty=label(scroll,query~="" and "No matching messages" or "No messages yet. Start the conversation.",UDim2.new(),UDim2.new(1,-12,0,50),muted,13);empty.Name="ChatEmpty"
+    end
+    spawn(function()
+        task.wait()
+        if not S.Stopped and scroll.Parent then
+            scroll.CanvasPosition=(nearBottom or force) and Vector2.new(0,math.max(0,scroll.AbsoluteCanvasSize.Y-scroll.AbsoluteSize.Y)) or position
+        end
+    end)
 end
-connect(room.Activated,function() roomIndex=roomIndex%#rooms+1;room.Text=rooms[roomIndex][1];render() end)
+local roomButtons={}
+local function selectRoom(index)
+    roomIndex=index
+    for i,b in ipairs(roomButtons) do
+        b.BackgroundColor3=i==index and Color3.fromRGB(63,49,86) or Color3.fromRGB(27,28,39)
+        b.TextColor3=i==index and white or muted
+        b.Font=i==index and Enum.Font.GothamBold or Enum.Font.Gotham
+    end
+    input.PlaceholderText="Message · "..rooms[index][3]
+    render(true)
+end
+for i,spec in ipairs(rooms) do
+    local b=button(tabs,spec[3],UDim2.new(),UDim2.fromOffset(math.max(76,#spec[3]*7+22),30))
+    b.Name="Language_"..spec[2];b.LayoutOrder=i;roomButtons[i]=b
+    connect(b.Activated,function()selectRoom(i)end)
+end
+connect(search:GetPropertyChangedSignal("Text"),function()render(true)end)
+connect(scroll:GetPropertyChangedSignal("AbsoluteSize"),function()if S.opened then render(false)end end)
+selectRoom(1)
 local BASE="https://serenityhub.site/api"
 local function api(path,body)
     if S.Stopped then return nil end
@@ -178,6 +242,7 @@ spawn(function()
                 local data,code=api("/chat/messages?after="..cursor.."&limit=100")
                 if data and Core.Status(code) and data.success==true and type(data.messages)=="table" then
                     delay=4;S.globalMuted=data.isChatMuted==true
+                    network.Text=S.globalMuted and "●  Chat muted" or "●  Live Network";network.TextColor3=S.globalMuted and orange or Color3.fromRGB(105,219,169)
                     if data.cleared then messages={};ids={};cursor=0 end
                     local changed=data.cleared==true
                     for _,m in ipairs(data.messages) do
@@ -191,6 +256,7 @@ spawn(function()
                     if changed then render() end
                     status.Text=(S.muted or S.globalMuted) and "Chat muted · You can still read messages." or "Live chat · Sends are visible to other users."
                 else
+                    network.Text="○  Reconnecting";network.TextColor3=muted
                     delay=math.min(delay*2,60);status.Text="Chat unavailable · Retrying automatically."
                 end
             else status.Text="Chat access restricted · Contact staff." end

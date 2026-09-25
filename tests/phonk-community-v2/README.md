@@ -54,3 +54,14 @@ bounded caches, official UI discovery, insertion after About, repeated execution
 stop cleanup/restored navigation, no blur and closed-chat polling suppression.
 No real chat messages or announcements were sent during development. Actual Roblox
 PC/mobile visuals and live-service behavior still need user testing.
+
+## Chat styling update
+Distinct General, Spanish, Indonesian, Filipino, Vietnamese and Portuguese tabs now
+select their exact language instead of cycling on each click. The existing server
+room codes are retained. This is the same global feed viewed with available server
+translations, not a promise of separate private rooms or automatic translation.
+Selected tabs are highlighted; the tab strip scrolls horizontally on narrow screens.
+Message rows include avatars, escaped role/name headings, game/time metadata and
+translation indicators. Search filters the already-loaded messages locally. No owner
+console, delete-message or moderation privileges are added to the client. Connection
+and mute status use the existing responses; no extra counter polling is introduced.
