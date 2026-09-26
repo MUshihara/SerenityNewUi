@@ -142,6 +142,96 @@ local function separator(parent, y)
  })
 end
 
+-- Lightweight opaque "liquid glass": color gradients + edge highlights only.
+-- No blur, transparency, images, polling, or per-frame animation.
+local function glassColors(base, strength)
+ strength = strength or 1
+ local cool = Color3.fromRGB(111, 171, 219)
+ local shadow = Color3.fromRGB(2, 12, 22)
+ return
+  base:Lerp(cool, math.clamp(.16 * strength, 0, .26)),
+  base:Lerp(cool, math.clamp(.055 * strength, 0, .10)),
+  base:Lerp(shadow, math.clamp(.16 * strength, 0, .25))
+end
+
+local function setGlassBase(o, base, strength)
+ local top, mid, bottom = glassColors(base, strength)
+ o.BackgroundColor3 = base
+ local g = o:FindFirstChild("SerenityGlassGradient")
+ if g and g:IsA("UIGradient") then
+  g.Color = ColorSequence.new({
+   ColorSequenceKeypoint.new(0.00, top),
+   ColorSequenceKeypoint.new(0.24, mid),
+   ColorSequenceKeypoint.new(0.58, base),
+   ColorSequenceKeypoint.new(1.00, bottom)
+  })
+ end
+end
+
+local function clearGlass(o)
+ for _, name in ipairs({"SerenityGlassGradient","SerenityGlassHighlight","SerenityGlassShade"}) do
+  local child = o:FindFirstChild(name)
+  if child then child:Destroy() end
+ end
+end
+
+local function glassify(o, base, strength, rotation, refineStroke)
+ clearGlass(o)
+ local g = make("UIGradient", o, {
+  Name = "SerenityGlassGradient",
+  Rotation = rotation or 90
+ })
+ setGlassBase(o, base, strength)
+
+ local hi = make("Frame", o, {
+  Name = "SerenityGlassHighlight",
+  BackgroundColor3 = Color3.fromRGB(214, 236, 255),
+  BackgroundTransparency = .72,
+  BorderSizePixel = 0,
+  Position = UDim2.fromOffset(8, 1),
+  Size = UDim2.new(1, -16, 0, 1),
+  ZIndex = o.ZIndex + 1
+ })
+ make("UIGradient", hi, {
+  Transparency = NumberSequence.new({
+   NumberSequenceKeypoint.new(0.00, 1.00),
+   NumberSequenceKeypoint.new(0.16, .48),
+   NumberSequenceKeypoint.new(0.52, .28),
+   NumberSequenceKeypoint.new(0.84, .62),
+   NumberSequenceKeypoint.new(1.00, 1.00)
+  })
+ })
+
+ local shade = make("Frame", o, {
+  Name = "SerenityGlassShade",
+  BackgroundColor3 = Color3.fromRGB(1, 9, 16),
+  BackgroundTransparency = .58,
+  BorderSizePixel = 0,
+  AnchorPoint = Vector2.new(0, 1),
+  Position = UDim2.new(0, 8, 1, -1),
+  Size = UDim2.new(1, -16, 0, 1),
+  ZIndex = o.ZIndex + 1
+ })
+ make("UIGradient", shade, {
+  Transparency = NumberSequence.new({
+   NumberSequenceKeypoint.new(0.00, 1.00),
+   NumberSequenceKeypoint.new(0.20, .68),
+   NumberSequenceKeypoint.new(0.50, .50),
+   NumberSequenceKeypoint.new(0.80, .72),
+   NumberSequenceKeypoint.new(1.00, 1.00)
+  })
+ })
+
+ if refineStroke ~= false then
+  local edge = o:FindFirstChildOfClass("UIStroke")
+  if edge then
+   edge.Color = base:Lerp(C.bright, .32)
+   edge.Transparency = .26
+  end
+ end
+ return g
+end
+
 -- Draw icons using native GUI geometry only; no remote assets.
 local function icon(parent, kind, x, y, size, color)
  local root = make("Frame", parent, {
@@ -239,6 +329,7 @@ if shellStroke then
  shellStroke.Transparency = 0.12
  shellStroke.Thickness = 1.2
 end
+glassify(shell, C.bg, .72, 90, true)
 
 local header = make("Frame", shell, {
  BackgroundColor3 = Color3.fromRGB(12, 35, 52),
@@ -253,13 +344,7 @@ make("Frame", header, {
  Position = UDim2.new(0, 0, 1, -10),
  Size = UDim2.new(1, 0, 0, 10)
 })
-make("UIGradient", header, {
- Color = ColorSequence.new({
-  ColorSequenceKeypoint.new(0, Color3.fromRGB(14, 40, 59)),
-  ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 30, 46))
- }),
- Rotation = 0
-})
+glassify(header, Color3.fromRGB(12, 35, 52), 1.08, 8, false)
 icon(header, "star", 14, 13, 24, C.text)
 
 local title = text(header, "SERENITY HUB", 20)
@@ -275,6 +360,7 @@ local previewPill = make("Frame", header, {
 })
 round(previewPill, 13)
 stroke(previewPill, C.bright, 0.42, 1)
+glassify(previewPill, C.blueDeep, 1.15, 18, true)
 local previewText = text(previewPill, "Preview", 11, C.muted)
 previewText.TextXAlignment = Enum.TextXAlignment.Center
 previewText.Size = UDim2.fromScale(1, 1)
@@ -292,11 +378,13 @@ icon(searchBtn, "search", 6, 6, 20, C.muted)
 local mini = button(header, "", C.blueDeep)
 mini.Size = UDim2.fromOffset(32, 32)
 mini.Position = UDim2.new(1, -74, 0, 9)
+glassify(mini, C.blueDeep, .95, 90, false)
 icon(mini, "minus", 7, 7, 18, C.muted)
 
 local close = button(header, "", C.blueDeep)
 close.Size = UDim2.fromOffset(32, 32)
 close.Position = UDim2.new(1, -36, 0, 9)
+glassify(close, C.blueDeep, .95, 90, false)
 icon(close, "close", 7, 7, 18, C.muted)
 on(close.Activated, cleanup)
 
@@ -305,6 +393,7 @@ local sidebar = make("Frame", shell, {
  BorderSizePixel = 0
 })
 round(sidebar, 12)
+glassify(sidebar, C.side, .55, 90, false)
 make("Frame", sidebar, {BackgroundColor3=C.side, BorderSizePixel=0, Size=UDim2.new(1,0,0,12)})
 make("Frame", sidebar, {
  BackgroundColor3 = C.line,
@@ -326,6 +415,7 @@ pad(nav, 8, 8, 9, 7)
 local navLayout = list(nav, 6)
 
 local sidebarCard = frame(sidebar, C.panel, 9)
+glassify(sidebarCard, C.panel, .92, 82, true)
 sidebarCard.AnchorPoint = Vector2.new(0, 1)
 sidebarCard.Position = UDim2.new(0, 9, 1, -10)
 sidebarCard.Size = UDim2.new(1, -18, 0, 58)
@@ -345,7 +435,7 @@ local dot = make("Frame", sidebarCard, {
 round(dot, 6)
 sideCardSub.Position = UDim2.fromOffset(52, 28)
 
-local foot = text(sidebar, "PC preview · v7", 10, C.muted2)
+local foot = text(sidebar, "PC preview · v8", 10, C.muted2)
 foot.AnchorPoint = Vector2.new(0, 1)
 foot.Position = UDim2.new(0, 12, 1, -73)
 foot.Size = UDim2.new(1, -24, 0, 18)
@@ -383,6 +473,7 @@ local statCards = {}
 local statData = {{"Session","Preview","clock"},{"Active now","—","user"},{"Status","UI only","Automation"}}
 for i, info in ipairs(statData) do
  local card = frame(stats, C.panel, 10)
+ glassify(card, C.panel, .88, 82, true)
  card.Size = UDim2.new(1/3, -7, 1, 0)
  card.Position = UDim2.new((i-1)/3, (i-1)*3.5, 0, 0)
  local tile = make("Frame", card, {
@@ -406,12 +497,7 @@ end
 local welcome = frame(body, C.panel:Lerp(C.blue, .65), 10)
 welcome.LayoutOrder = 4
 welcome.Size = UDim2.new(1,0,0,48)
-make("UIGradient", welcome, {
- Color = ColorSequence.new({
-  ColorSequenceKeypoint.new(0, Color3.fromRGB(51, 105, 146)),
-  ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 80, 116))
- })
-})
+glassify(welcome, C.panel:Lerp(C.blue, .65), 1.28, 14, true)
 icon(welcome, "star", 13, 13, 23, C.text)
 local welcomeTitle = text(welcome, "Welcome back", 14)
 welcomeTitle.Font = Enum.Font.GothamBold
@@ -429,6 +515,7 @@ local columns = make("Frame", body, {
 })
 
 local controls = frame(columns, C.panel, 10)
+glassify(controls, C.panel, .78, 88, true)
 controls.AutomaticSize = Enum.AutomaticSize.Y
 controls.Size = UDim2.new(1,0,0,0)
 pad(controls, 12)
@@ -499,6 +586,7 @@ toggle("Auto sell (demo)", "Preview state only; no items are modified.", false)
 
 local dropRow = row("Effects (demo)", "Visual preference preview only.", 50)
 local drop = button(dropRow, "", C.blueDeep)
+glassify(drop, C.blueDeep, .88, 90, false)
 drop.Size = UDim2.fromOffset(112, 32)
 drop.Position = UDim2.new(1, -112, 0.5, -16)
 stroke(drop, C.line, 0.2, 1)
@@ -508,6 +596,7 @@ dropLabel.Size = UDim2.new(1,-34,1,0)
 local dropArrow = icon(drop, "down", 89, 8, 16, C.muted)
 
 local choices = frame(controls, C.side, 8)
+glassify(choices, C.side, .72, 90, true)
 choices.BackgroundTransparency = 0
 choices.Size = UDim2.new(1,0,0,88)
 choices.Visible = false
@@ -576,7 +665,7 @@ local function slide(x)
  fill.Size = UDim2.fromScale(v,1)
  sliderKnob.Position = UDim2.fromScale(v,.5)
  pct.Text = tostring(math.floor(v * 100 + .5)) .. "%"
- welcome.BackgroundColor3 = C.panel:Lerp(C.blue, v)
+ setGlassBase(welcome, C.panel:Lerp(C.blue, v), 1.28)
 end
 on(sliderHit.InputBegan, function(input)
  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -594,6 +683,7 @@ on(UIS.InputEnded, function(input)
 end)
 
 local updates = frame(columns, C.panel, 10)
+glassify(updates, C.panel, .80, 86, true)
 updates.Size = UDim2.new(1,0,0,252)
 pad(updates, 12)
 local upd = text(updates, "What's new", 16)
@@ -632,12 +722,14 @@ for i, info in ipairs(updatesData) do
 end
 
 local viewUpdates = button(updates, "View updates", C.blueDeep)
+glassify(viewUpdates, C.blueDeep, 1.02, 90, false)
 viewUpdates.Size = UDim2.fromOffset(98, 30)
 viewUpdates.Position = UDim2.new(1, -98, 1, -30)
 viewUpdates.TextSize = 12
 stroke(viewUpdates, C.line, 0.24, 1)
 
 local community = frame(body, C.panel, 10)
+glassify(community, C.panel, .80, 88, true)
 community.LayoutOrder = 6
 community.Size = UDim2.new(1,0,0,54)
 local communityTile = make("Frame", community, {
@@ -657,6 +749,7 @@ communitySub.Position = UDim2.fromOffset(54,25)
 communitySub.Size = UDim2.new(1,-174,0,18)
 
 local notice = frame(shell, C.panel2, 10)
+glassify(notice, C.panel2, 1.04, 76, true)
 notice.Visible = false
 notice.ZIndex = 20
 local nt = text(notice,"Serenity preview",14)
@@ -676,6 +769,7 @@ icon(nx,"close",5,5,18,C.muted)
 on(nx.Activated,function() notice.Visible=false end)
 
 local test = button(community,"Preview notice",C.blue)
+glassify(test, C.blue, 1.04, 90, false)
 test.Size = UDim2.fromOffset(104,32)
 test.Position = UDim2.new(1,-114,0,11)
 test.TextSize = 12
@@ -696,6 +790,7 @@ on(searchBtn.Activated,function()
 end)
 
 local inventoryInfo = frame(body, C.panel, 10)
+glassify(inventoryInfo, C.panel, .78, 88, true)
 inventoryInfo.LayoutOrder = 5
 inventoryInfo.Size = UDim2.new(1,0,0,112)
 inventoryInfo.Visible = false
@@ -707,6 +802,7 @@ inventoryDesc.Position = UDim2.fromOffset(0,34)
 inventoryDesc.Size = UDim2.new(1,0,0,70)
 
 local fontBar = frame(body, C.panel, 10)
+glassify(fontBar, C.panel, .78, 88, true)
 fontBar.Visible = false
 fontBar.Name = "FontComparison"
 fontBar.LayoutOrder = 2
@@ -782,7 +878,12 @@ for _, name in ipairs({"About","Dashboard","Automation","Inventory","Settings"})
   end
   for n, other in pairs(navButtons) do
    local active = n == name
-   other.BackgroundColor3 = active and C.blue or C.side
+   if active then
+    glassify(other, C.blue, .94, 90, false)
+   else
+    clearGlass(other)
+    other.BackgroundColor3 = C.side
+   end
    navMarkers[n].Visible = active
    navLabels[n].TextColor3 = active and C.text or C.muted
    for _, child in ipairs(navIcons[n]:GetDescendants()) do
@@ -795,7 +896,11 @@ for _, name in ipairs({"About","Dashboard","Automation","Inventory","Settings"})
   end
   body.CanvasPosition = Vector2.new(0,0)
  end)
- b.BackgroundColor3 = name == "Dashboard" and C.blue or C.side
+ if name == "Dashboard" then
+  glassify(b, C.blue, .94, 90, false)
+ else
+  b.BackgroundColor3 = C.side
+ end
  caption.TextColor3 = name == "Dashboard" and C.text or C.muted
 end
 
