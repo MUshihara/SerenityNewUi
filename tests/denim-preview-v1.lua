@@ -223,6 +223,9 @@ local function icon(parent, kind, x, y, size, color)
   line(.25,.75,.75,.25)
  elseif kind == "minus" then
   line(.2,.5,.8,.5)
+ elseif kind == "search" then
+  box(.12,.12,.56,.56,100)
+  line(.61,.61,.88,.88,1.8)
  end
  return root
 end
@@ -240,44 +243,61 @@ end
 local header = make("Frame", shell, {
  BackgroundColor3 = Color3.fromRGB(12, 35, 52),
  BorderSizePixel = 0,
- Size = UDim2.new(1, 0, 0, 56)
+ Size = UDim2.new(1, 0, 0, 50)
 })
 round(header, 12)
 -- Fill lower header corners so only the shell controls outer rounding.
 make("Frame", header, {
  BackgroundColor3 = Color3.fromRGB(12, 35, 52),
  BorderSizePixel = 0,
- Position = UDim2.new(0, 0, 1, -12),
- Size = UDim2.new(1, 0, 0, 12)
+ Position = UDim2.new(0, 0, 1, -10),
+ Size = UDim2.new(1, 0, 0, 10)
 })
-icon(header, "star", 16, 15, 26, C.text)
+make("UIGradient", header, {
+ Color = ColorSequence.new({
+  ColorSequenceKeypoint.new(0, Color3.fromRGB(14, 40, 59)),
+  ColorSequenceKeypoint.new(1, Color3.fromRGB(10, 30, 46))
+ }),
+ Rotation = 0
+})
+icon(header, "star", 14, 13, 24, C.text)
 
-local title = text(header, "SERENITY HUB", 21)
+local title = text(header, "SERENITY HUB", 20)
 title.Font = Enum.Font.GothamBold
-title.Position = UDim2.fromOffset(52, 9)
-title.Size = UDim2.new(0, 190, 0, 38)
+title.Position = UDim2.fromOffset(46, 6)
+title.Size = UDim2.new(0, 175, 0, 36)
 
 local previewPill = make("Frame", header, {
  BackgroundColor3 = C.blueDeep,
  BorderSizePixel = 0,
- Position = UDim2.fromOffset(220, 15),
- Size = UDim2.fromOffset(76, 28)
+ Position = UDim2.fromOffset(204, 12),
+ Size = UDim2.fromOffset(72, 26)
 })
-round(previewPill, 14)
+round(previewPill, 13)
 stroke(previewPill, C.bright, 0.42, 1)
-local previewText = text(previewPill, "Preview", 12, C.muted)
+local previewText = text(previewPill, "Preview", 11, C.muted)
 previewText.TextXAlignment = Enum.TextXAlignment.Center
 previewText.Size = UDim2.fromScale(1, 1)
 
+local searchBtn = make("TextButton", header, {
+ Text = "",
+ BackgroundTransparency = 1,
+ BorderSizePixel = 0,
+ AutoButtonColor = false,
+ Size = UDim2.fromOffset(32, 32),
+ Position = UDim2.new(1, -112, 0, 9)
+})
+icon(searchBtn, "search", 6, 6, 20, C.muted)
+
 local mini = button(header, "", C.blueDeep)
-mini.Size = UDim2.fromOffset(34, 34)
-mini.Position = UDim2.new(1, -82, 0, 11)
-icon(mini, "minus", 8, 8, 18, C.muted)
+mini.Size = UDim2.fromOffset(32, 32)
+mini.Position = UDim2.new(1, -74, 0, 9)
+icon(mini, "minus", 7, 7, 18, C.muted)
 
 local close = button(header, "", C.blueDeep)
-close.Size = UDim2.fromOffset(34, 34)
-close.Position = UDim2.new(1, -42, 0, 11)
-icon(close, "close", 8, 8, 18, C.muted)
+close.Size = UDim2.fromOffset(32, 32)
+close.Position = UDim2.new(1, -36, 0, 9)
+icon(close, "close", 7, 7, 18, C.muted)
 on(close.Activated, cleanup)
 
 local sidebar = make("Frame", shell, {
@@ -302,34 +322,33 @@ make("Frame", header, {
 })
 
 local nav = make("Frame", sidebar, {BackgroundTransparency=1})
-pad(nav, 9, 9, 10, 8)
+pad(nav, 8, 8, 9, 7)
 local navLayout = list(nav, 6)
 
 local sidebarCard = frame(sidebar, C.panel, 9)
 sidebarCard.AnchorPoint = Vector2.new(0, 1)
-sidebarCard.Position = UDim2.new(0, 10, 1, -12)
-sidebarCard.Size = UDim2.new(1, -20, 0, 68)
-icon(sidebarCard, "user", 12, 17, 26, C.muted)
-local sideCardTitle = text(sidebarCard, "Preview mode", 13)
+sidebarCard.Position = UDim2.new(0, 9, 1, -10)
+sidebarCard.Size = UDim2.new(1, -18, 0, 58)
+icon(sidebarCard, "user", 10, 16, 23, C.muted)
+local sideCardTitle = text(sidebarCard, "Preview", 12)
 sideCardTitle.Font = Enum.Font.GothamMedium
-sideCardTitle.Position = UDim2.fromOffset(47, 9)
-sideCardTitle.Size = UDim2.new(1, -55, 0, 24)
-local sideCardSub = text(sidebarCard, "UI only", 12, C.green)
-sideCardSub.Position = UDim2.fromOffset(47, 31)
-sideCardSub.Size = UDim2.new(1, -55, 0, 21)
+sideCardTitle.Position = UDim2.fromOffset(41, 7)
+sideCardTitle.Size = UDim2.new(1, -48, 0, 21)
+local sideCardSub = text(sidebarCard, "Local UI only", 11, C.green)
+sideCardSub.Size = UDim2.new(1, -57, 0, 19)
 local dot = make("Frame", sidebarCard, {
  BackgroundColor3 = C.green,
  BorderSizePixel = 0,
- Position = UDim2.fromOffset(47, 39),
- Size = UDim2.fromOffset(7, 7)
+ Position = UDim2.fromOffset(41, 36),
+ Size = UDim2.fromOffset(6, 6)
 })
-round(dot, 7)
-sideCardSub.Position = UDim2.fromOffset(59, 31)
+round(dot, 6)
+sideCardSub.Position = UDim2.fromOffset(52, 28)
 
-local foot = text(sidebar, "PC preview · v6", 11, C.muted2)
+local foot = text(sidebar, "PC preview · v7", 10, C.muted2)
 foot.AnchorPoint = Vector2.new(0, 1)
-foot.Position = UDim2.new(0, 14, 1, -86)
-foot.Size = UDim2.new(1, -28, 0, 20)
+foot.Position = UDim2.new(0, 12, 1, -73)
+foot.Size = UDim2.new(1, -24, 0, 18)
 
 local body = make("ScrollingFrame", shell, {
  BackgroundTransparency = 1,
@@ -340,24 +359,24 @@ local body = make("ScrollingFrame", shell, {
  AutomaticCanvasSize = Enum.AutomaticSize.Y,
  ScrollingDirection = Enum.ScrollingDirection.Y
 })
-pad(body, 14)
-list(body, 10)
+pad(body, 12)
+list(body, 8)
 
 local pageHead = make("Frame", body, {
  BackgroundTransparency = 1,
- Size = UDim2.new(1,0,0,54),
+ Size = UDim2.new(1,0,0,46),
  LayoutOrder = 1
 })
-local heading = text(pageHead, "Dashboard", 25)
+local heading = text(pageHead, "Dashboard", 23)
 heading.Font = Enum.Font.GothamBold
-heading.Size = UDim2.new(1,0,0,31)
-local subtitle = text(pageHead, "Design preview / no gameplay actions", 13, C.muted)
-subtitle.Position = UDim2.fromOffset(0, 31)
-subtitle.Size = UDim2.new(1,0,0,20)
+heading.Size = UDim2.new(1,0,0,28)
+local subtitle = text(pageHead, "Design preview / no gameplay actions", 12, C.muted)
+subtitle.Position = UDim2.fromOffset(0, 27)
+subtitle.Size = UDim2.new(1,0,0,18)
 
 local stats = make("Frame", body, {
  BackgroundTransparency = 1,
- Size = UDim2.new(1,0,0,76),
+ Size = UDim2.new(1,0,0,68),
  LayoutOrder = 3
 })
 local statCards = {}
@@ -369,32 +388,38 @@ for i, info in ipairs(statData) do
  local tile = make("Frame", card, {
   BackgroundColor3 = i == 3 and Color3.fromRGB(19, 68, 67) or C.blueDeep,
   BorderSizePixel = 0,
-  Position = UDim2.fromOffset(12, 18),
-  Size = UDim2.fromOffset(38, 38)
+  Position = UDim2.fromOffset(10, 17),
+  Size = UDim2.fromOffset(34, 34)
  })
- round(tile, 9)
- icon(tile, info[3], 8, 8, 22, i == 3 and C.green or C.muted)
- local label = text(card, info[1], 12, C.muted)
- label.Position = UDim2.fromOffset(60, 10)
- label.Size = UDim2.new(1, -68, 0, 22)
- local value = text(card, info[2], 20, i == 3 and C.green or C.text)
- value.Position = UDim2.fromOffset(60, 31)
- value.Size = UDim2.new(1, -68, 0, 30)
+ round(tile, 8)
+ icon(tile, info[3], 7, 7, 20, i == 3 and C.green or C.muted)
+ local label = text(card, info[1], 11, C.muted)
+ label.Position = UDim2.fromOffset(53, 7)
+ label.Size = UDim2.new(1, -60, 0, 20)
+ local value = text(card, info[2], 18, i == 3 and C.green or C.text)
+ value.Position = UDim2.fromOffset(53, 26)
+ value.Size = UDim2.new(1, -60, 0, 26)
  value.Font = Enum.Font.GothamBold
  statCards[i] = card
 end
 
 local welcome = frame(body, C.panel:Lerp(C.blue, .65), 10)
 welcome.LayoutOrder = 4
-welcome.Size = UDim2.new(1,0,0,56)
-icon(welcome, "star", 14, 14, 27, C.text)
-local welcomeTitle = text(welcome, "Welcome back", 15)
+welcome.Size = UDim2.new(1,0,0,48)
+make("UIGradient", welcome, {
+ Color = ColorSequence.new({
+  ColorSequenceKeypoint.new(0, Color3.fromRGB(51, 105, 146)),
+  ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 80, 116))
+ })
+})
+icon(welcome, "star", 13, 13, 23, C.text)
+local welcomeTitle = text(welcome, "Welcome back", 14)
 welcomeTitle.Font = Enum.Font.GothamBold
-welcomeTitle.Position = UDim2.fromOffset(53, 7)
-welcomeTitle.Size = UDim2.new(1,-65,0,23)
-local welcomeText = text(welcome, "Choose a category to continue exploring the preview.", 12, C.muted)
-welcomeText.Position = UDim2.fromOffset(53, 28)
-welcomeText.Size = UDim2.new(1,-65,0,20)
+welcomeTitle.Position = UDim2.fromOffset(47, 5)
+welcomeTitle.Size = UDim2.new(1,-58,0,21)
+local welcomeText = text(welcome, "Choose a category to continue exploring the preview.", 11, C.muted)
+welcomeText.Position = UDim2.fromOffset(47, 24)
+welcomeText.Size = UDim2.new(1,-58,0,18)
 
 local columns = make("Frame", body, {
  Name = "Columns",
@@ -406,43 +431,43 @@ local columns = make("Frame", body, {
 local controls = frame(columns, C.panel, 10)
 controls.AutomaticSize = Enum.AutomaticSize.Y
 controls.Size = UDim2.new(1,0,0,0)
-pad(controls, 13)
+pad(controls, 12)
 list(controls, 0)
-local controlTitle = text(controls, "Quick settings", 17)
+local controlTitle = text(controls, "Quick settings", 16)
 controlTitle.Font = Enum.Font.GothamBold
 controlTitle.LayoutOrder = 0
-controlTitle.Size = UDim2.new(1,0,0,34)
+controlTitle.Size = UDim2.new(1,0,0,30)
 
 local rowOrder = 0
 local function row(label, description, height)
  rowOrder += 1
- local h = height or 50
+ local h = height or 46
  local r = make("Frame", controls, {
   BackgroundTransparency = 1,
   Size = UDim2.new(1,0,0,h),
   LayoutOrder = rowOrder
  })
- local l = text(r, label, 14)
+ local l = text(r, label, 13)
  l.Font = Enum.Font.GothamMedium
- l.Position = UDim2.fromOffset(0, 4)
- l.Size = UDim2.new(1,-128,0,23)
+ l.Position = UDim2.fromOffset(0, 3)
+ l.Size = UDim2.new(1,-118,0,21)
  if description then
-  local d = text(r, description, 12, C.muted)
-  d.Position = UDim2.fromOffset(0, 24)
-  d.Size = UDim2.new(1,-128,0,20)
+  local d = text(r, description, 11, C.muted)
+  d.Position = UDim2.fromOffset(0, 22)
+  d.Size = UDim2.new(1,-118,0,18)
  end
  separator(r, -1)
  return r
 end
 
 local function toggle(label, description, initial, callback)
- local r = row(label, description, 52)
+ local r = row(label, description, 48)
  local b = button(r, "", C.line)
- b.Size = UDim2.fromOffset(46, 26)
- b.Position = UDim2.new(1, -46, 0.5, -13)
- round(b, 14)
+ b.Size = UDim2.fromOffset(44, 24)
+ b.Position = UDim2.new(1, -44, 0.5, -12)
+ round(b, 13)
  local knob = make("Frame", b, {
-  Size = UDim2.fromOffset(20,20),
+  Size = UDim2.fromOffset(18,18),
   BackgroundColor3 = C.text,
   BorderSizePixel = 0
  })
@@ -472,15 +497,15 @@ end
 toggle("Auto collect (demo)", "Layout-only interaction; no gameplay action.", true)
 toggle("Auto sell (demo)", "Preview state only; no items are modified.", false)
 
-local dropRow = row("Effects (demo)", "Visual preference preview only.", 54)
+local dropRow = row("Effects (demo)", "Visual preference preview only.", 50)
 local drop = button(dropRow, "", C.blueDeep)
-drop.Size = UDim2.fromOffset(122, 34)
-drop.Position = UDim2.new(1, -122, 0.5, -17)
+drop.Size = UDim2.fromOffset(112, 32)
+drop.Position = UDim2.new(1, -112, 0.5, -16)
 stroke(drop, C.line, 0.2, 1)
-local dropLabel = text(drop, "Reduced", 13)
-dropLabel.Position = UDim2.fromOffset(11,0)
-dropLabel.Size = UDim2.new(1,-38,1,0)
-local dropArrow = icon(drop, "down", 98, 9, 16, C.muted)
+local dropLabel = text(drop, "Reduced", 12)
+dropLabel.Position = UDim2.fromOffset(10,0)
+dropLabel.Size = UDim2.new(1,-34,1,0)
+local dropArrow = icon(drop, "down", 89, 8, 16, C.muted)
 
 local choices = frame(controls, C.side, 8)
 choices.BackgroundTransparency = 0
@@ -509,7 +534,7 @@ on(drop.Activated, function()
  dropArrow.Rotation = choices.Visible and 180 or 0
 end)
 
-local sliderRow = row("Accent intensity", "Adjusts this preview's welcome-strip tint.", 64)
+local sliderRow = row("Accent intensity", "Adjusts this preview's welcome-strip tint.", 58)
 local track = make("TextButton", sliderRow, {
  Text = "",
  AutoButtonColor = false,
@@ -569,61 +594,67 @@ on(UIS.InputEnded, function(input)
 end)
 
 local updates = frame(columns, C.panel, 10)
-updates.Size = UDim2.new(1,0,0,284)
-pad(updates, 14)
-local upd = text(updates, "What's new", 17)
+updates.Size = UDim2.new(1,0,0,252)
+pad(updates, 12)
+local upd = text(updates, "What's new", 16)
 upd.Font = Enum.Font.GothamBold
-upd.Size = UDim2.new(1,0,0,30)
+upd.Size = UDim2.new(1,0,0,28)
 
 local updateRows = {}
 local updatesData = {
- {"Refined denim surfaces", "Softer contrast and cleaner borders."},
- {"Stronger navigation", "Clearer selected states and spacing."},
- {"Desktop readability", "More room without shrinking native text."}
+ {"Refined denim surfaces", "Softer contrast, cleaner borders."},
+ {"Stronger navigation", "Clearer active states and spacing."},
+ {"Desktop readability", "Native-size text with less crowding."}
 }
 for i, info in ipairs(updatesData) do
  local item = make("Frame", updates, {
   BackgroundTransparency = 1,
-  Position = UDim2.fromOffset(0, 34 + (i-1)*64),
-  Size = UDim2.new(1,0,0,64)
+  Position = UDim2.fromOffset(0, 30 + (i-1)*52),
+  Size = UDim2.new(1,0,0,52)
  })
  local tile = make("Frame", item, {
   BackgroundColor3 = C.blueDeep,
   BorderSizePixel = 0,
-  Position = UDim2.fromOffset(0, 10),
-  Size = UDim2.fromOffset(34, 34)
+  Position = UDim2.fromOffset(0, 9),
+  Size = UDim2.fromOffset(30, 30)
  })
- round(tile, 8)
- icon(tile, "doc", 7, 7, 20, C.muted)
- local a = text(item, info[1], 14)
+ round(tile, 7)
+ icon(tile, "doc", 6, 6, 18, C.muted)
+ local a = text(item, info[1], 13)
  a.Font = Enum.Font.GothamMedium
- a.Position = UDim2.fromOffset(46, 4)
- a.Size = UDim2.new(1,-46,0,25)
- local b = text(item, info[2], 12, C.muted)
- b.Position = UDim2.fromOffset(46, 27)
- b.Size = UDim2.new(1,-46,0,26)
+ a.Position = UDim2.fromOffset(40, 2)
+ a.Size = UDim2.new(1,-40,0,22)
+ local b = text(item, info[2], 11, C.muted)
+ b.Position = UDim2.fromOffset(40, 22)
+ b.Size = UDim2.new(1,-40,0,24)
  if i < #updatesData then separator(item, -1) end
  updateRows[i] = item
 end
 
+local viewUpdates = button(updates, "View updates", C.blueDeep)
+viewUpdates.Size = UDim2.fromOffset(98, 30)
+viewUpdates.Position = UDim2.new(1, -98, 1, -30)
+viewUpdates.TextSize = 12
+stroke(viewUpdates, C.line, 0.24, 1)
+
 local community = frame(body, C.panel, 10)
 community.LayoutOrder = 6
-community.Size = UDim2.new(1,0,0,62)
+community.Size = UDim2.new(1,0,0,54)
 local communityTile = make("Frame", community, {
  BackgroundColor3 = C.blueDeep,
  BorderSizePixel = 0,
- Position = UDim2.fromOffset(12, 12),
- Size = UDim2.fromOffset(38,38)
+ Position = UDim2.fromOffset(10, 10),
+ Size = UDim2.fromOffset(34,34)
 })
-round(communityTile,9)
-icon(communityTile,"user",8,8,22,C.muted)
-local communityTitle = text(community,"Community",14)
+round(communityTile,8)
+icon(communityTile,"user",7,7,20,C.muted)
+local communityTitle = text(community,"Community",13)
 communityTitle.Font = Enum.Font.GothamMedium
-communityTitle.Position = UDim2.fromOffset(61,7)
-communityTitle.Size = UDim2.new(1,-190,0,23)
-local communitySub = text(community,"News and updates preview",12,C.muted)
-communitySub.Position = UDim2.fromOffset(61,29)
-communitySub.Size = UDim2.new(1,-190,0,21)
+communityTitle.Position = UDim2.fromOffset(54,5)
+communityTitle.Size = UDim2.new(1,-174,0,21)
+local communitySub = text(community,"News and updates preview",11,C.muted)
+communitySub.Position = UDim2.fromOffset(54,25)
+communitySub.Size = UDim2.new(1,-174,0,18)
 
 local notice = frame(shell, C.panel2, 10)
 notice.Visible = false
@@ -644,14 +675,29 @@ nx.Position = UDim2.new(1,-34,0,6)
 icon(nx,"close",5,5,18,C.muted)
 on(nx.Activated,function() notice.Visible=false end)
 
-local test = button(community,"Test notice",C.blue)
-test.Size = UDim2.fromOffset(108,34)
-test.Position = UDim2.new(1,-120,0,14)
-on(test.Activated,function() notice.Visible = not notice.Visible end)
+local test = button(community,"Preview notice",C.blue)
+test.Size = UDim2.fromOffset(104,32)
+test.Position = UDim2.new(1,-114,0,11)
+test.TextSize = 12
+on(test.Activated,function()
+ nt.Text = "Serenity preview"
+ nb.Text = "Notification placement test only."
+ notice.Visible = not notice.Visible
+end)
+on(viewUpdates.Activated,function()
+ nt.Text = "What's new"
+ nb.Text = "This button is visual-only in the isolated preview."
+ notice.Visible = true
+end)
+on(searchBtn.Activated,function()
+ nt.Text = "Search preview"
+ nb.Text = "Search is not connected in this visual prototype."
+ notice.Visible = true
+end)
 
 local inventoryInfo = frame(body, C.panel, 10)
 inventoryInfo.LayoutOrder = 5
-inventoryInfo.Size = UDim2.new(1,0,0,126)
+inventoryInfo.Size = UDim2.new(1,0,0,112)
 inventoryInfo.Visible = false
 pad(inventoryInfo,16)
 local inventoryTitle = text(inventoryInfo,"Inventory preview",18)
@@ -664,7 +710,7 @@ local fontBar = frame(body, C.panel, 10)
 fontBar.Visible = false
 fontBar.Name = "FontComparison"
 fontBar.LayoutOrder = 2
-fontBar.Size = UDim2.new(1,0,0,82)
+fontBar.Size = UDim2.new(1,0,0,74)
 local fontStatus = text(fontBar,"Selected font: Ubuntu",12,C.muted)
 fontStatus.Position = UDim2.fromOffset(11,5)
 fontStatus.Size = UDim2.new(1,-22,0,21)
@@ -676,8 +722,8 @@ local fontOptions = {
 local fontButtons = {}
 for i, option in ipairs(fontOptions) do
  local b = button(fontBar,option.label,C.side)
- b.Position = UDim2.new((i-1)/3,7,0,33)
- b.Size = UDim2.new(1/3,-14,0,38)
+ b.Position = UDim2.new((i-1)/3,7,0,31)
+ b.Size = UDim2.new(1/3,-14,0,34)
  stroke(b,C.line,0.3,1)
  fontButtons[i] = b
 end
@@ -691,22 +737,28 @@ local arrangeColumns
 
 for _, name in ipairs({"About","Dashboard","Automation","Inventory","Settings"}) do
  local b = button(nav,"",C.side)
- b.Size = UDim2.new(1,0,0,42)
- navIcons[name] = icon(b,name,11,11,20,name=="Dashboard" and C.text or C.muted)
- local caption = text(b,name,15)
- caption.Position = UDim2.fromOffset(41,0)
- caption.Size = UDim2.new(1,-48,1,0)
+ b.Size = UDim2.new(1,0,0,38)
+ navIcons[name] = icon(b,name,10,10,18,name=="Dashboard" and C.text or C.muted)
+ local caption = text(b,name,14)
+ caption.Position = UDim2.fromOffset(38,0)
+ caption.Size = UDim2.new(1,-44,1,0)
  navLabels[name] = caption
  navButtons[name] = b
  local mark = make("Frame",b,{
   BackgroundColor3 = C.bright,
   BorderSizePixel = 0,
   Position = UDim2.fromOffset(0,8),
-  Size = UDim2.fromOffset(4,26),
+  Size = UDim2.fromOffset(3,22),
   Visible = name == "Dashboard"
  })
  round(mark,2)
  navMarkers[name] = mark
+ on(b.MouseEnter,function()
+  if selected ~= name then b.BackgroundColor3 = C.panel2 end
+ end)
+ on(b.MouseLeave,function()
+  if selected ~= name then b.BackgroundColor3 = C.side end
+ end)
  on(b.Activated,function()
   selected = name
   choices.Visible = false
@@ -748,43 +800,44 @@ for _, name in ipairs({"About","Dashboard","Automation","Inventory","Settings"})
 end
 
 local minimized = false
-local HEADER_H = 56
+local HEADER_H = 50
 local function layout()
  local vp = gui.AbsoluteSize
  if vp.X < 1 or vp.Y < 1 then vp = workspace.CurrentCamera.ViewportSize end
- local w = math.min(940, math.floor(vp.X * .88))
+ local w = math.min(860, math.floor(vp.X * .80))
  if vp.X < 620 then w = math.max(1, vp.X - 20) end
- local h = math.min(650, math.floor(vp.Y * .88))
+ local h = math.min(580, math.floor(vp.Y * .82))
  if vp.Y < 540 then h = math.max(1, vp.Y - 20) end
- local narrow = w < 650
- local compactNav = w < 760
- local sideWidth = compactNav and 58 or 170
+ local narrow = w < 630
+ local compactNav = w < 710
+ local sideWidth = compactNav and 54 or 154
  local shownH = minimized and HEADER_H or h
  shell.Size = UDim2.fromOffset(w, shownH)
  sidebar.Visible = not minimized
  body.Visible = not minimized
  sidebar.Position = UDim2.fromOffset(0,HEADER_H)
  sidebar.Size = UDim2.new(0,sideWidth,1,-HEADER_H)
- nav.Size = UDim2.new(1,0,1, compactNav and -16 or -108)
+ nav.Size = UDim2.new(1,0,1, compactNav and -14 or -94)
  navLayout.FillDirection = Enum.FillDirection.Vertical
- navLayout.Padding = UDim.new(0,6)
+ navLayout.Padding = UDim.new(0,5)
  foot.Visible = not compactNav
  sidebarCard.Visible = not compactNav
  for name,b in pairs(navButtons) do
-  b.Size = UDim2.new(1,0,0,42)
+  b.Size = UDim2.new(1,0,0,38)
   navLabels[name].Visible = not compactNav
-  navIcons[name].Position = UDim2.fromOffset(compactNav and 10 or 11,11)
+  navIcons[name].Position = UDim2.fromOffset(compactNav and 10 or 10,10)
  end
  body.Position = UDim2.fromOffset(sideWidth,HEADER_H)
  body.Size = UDim2.new(1,-sideWidth,1,-HEADER_H)
  previewPill.Visible = w >= 560
+ searchBtn.Visible = w >= 680
  if arrangeColumns then arrangeColumns() end
  for _, card in ipairs(statCards) do
   local tile = card:FindFirstChildWhichIsA("Frame")
   for _, child in ipairs(card:GetChildren()) do
    if child:IsA("TextLabel") then
-    child.Position = UDim2.fromOffset(narrow and 12 or 60, child.Position.Y.Offset)
-    child.Size = UDim2.new(1, narrow and -24 or -68, 0, child.Size.Y.Offset)
+    child.Position = UDim2.fromOffset(narrow and 10 or 53, child.Position.Y.Offset)
+    child.Size = UDim2.new(1, narrow and -20 or -60, 0, child.Size.Y.Offset)
    end
   end
   if tile then tile.Visible = not narrow end
@@ -793,7 +846,7 @@ local function layout()
  notice.Position = UDim2.new(1,-12,0,HEADER_H+10)
  notice.AnchorPoint = Vector2.new(1,0)
  if minimized then notice.Visible = false end
- title.TextSize = w < 420 and 18 or 21
+ title.TextSize = w < 420 and 18 or 20
  local px, py = shell.Position.X, shell.Position.Y
  local cx = px.Scale * vp.X + px.Offset
  local cy = py.Scale * vp.Y + py.Offset
@@ -804,19 +857,19 @@ local function layout()
 end
 
 arrangeColumns = function()
- local stacked = shell.Size.X.Offset < 760
- local ch = math.max(280, controls.AbsoluteSize.Y)
+ local stacked = shell.Size.X.Offset < 710
+ local ch = math.max(252, controls.AbsoluteSize.Y)
  local dashboard = selected == "Dashboard"
  if selected == "About" then
   updates.Position = UDim2.fromOffset(0,0)
-  updates.Size = UDim2.new(1,0,0,270)
-  columns.Size = UDim2.new(1,0,0,270)
+  updates.Size = UDim2.new(1,0,0,236)
+  columns.Size = UDim2.new(1,0,0,236)
  elseif dashboard then
-  controls.Size = UDim2.new(stacked and 1 or .60, stacked and 0 or -6, 0, 0)
+  controls.Size = UDim2.new(stacked and 1 or .61, stacked and 0 or -5, 0, 0)
   controls.Position = UDim2.fromOffset(0,0)
-  updates.Position = stacked and UDim2.fromOffset(0,ch+10) or UDim2.new(.60,6,0,0)
-  updates.Size = UDim2.new(stacked and 1 or .40, stacked and 0 or -6, 0, math.max(ch,284))
-  columns.Size = UDim2.new(1,0,0, stacked and ch + math.max(ch,284) + 10 or math.max(ch,284))
+  updates.Position = stacked and UDim2.fromOffset(0,ch+8) or UDim2.new(.61,5,0,0)
+  updates.Size = UDim2.new(stacked and 1 or .39, stacked and 0 or -5, 0, math.max(ch,252))
+  columns.Size = UDim2.new(1,0,0, stacked and ch + math.max(ch,252) + 8 or math.max(ch,252))
  else
   controls.Size = UDim2.new(1,0,0,0)
   controls.Position = UDim2.fromOffset(0,0)
