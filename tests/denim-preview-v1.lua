@@ -1,13 +1,17 @@
 -- Serenity Denim UI: isolated visual prototype. No gameplay or telemetry.
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
 assert(player, "Run this preview on the client")
+
 local env = (getgenv and getgenv()) or _G
 local KEY = "__SerenityDenimPreview"
 if env[KEY] then env[KEY]() end
+
 local connections = {}
 local dead = false
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "SerenityDenimPreview"
 gui.ResetOnSpawn = false
@@ -15,6 +19,7 @@ gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.DisplayOrder = 120
 gui.IgnoreGuiInset = true
 gui.Parent = player:WaitForChild("PlayerGui")
+
 local function cleanup()
  if dead then return end
  dead = true
@@ -23,468 +28,903 @@ local function cleanup()
  if env[KEY] == cleanup then env[KEY] = nil end
 end
 env[KEY] = cleanup
+
 local function on(signal, fn)
  local c = signal:Connect(fn)
  table.insert(connections, c)
  return c
 end
+
 local C = {
- bg=Color3.fromRGB(13,32,48), panel=Color3.fromRGB(19,43,62),
- side=Color3.fromRGB(11,28,42), line=Color3.fromRGB(43,76,101),
- blue=Color3.fromRGB(42,89,124), bright=Color3.fromRGB(81,151,220),
- text=Color3.fromRGB(243,237,222), muted=Color3.fromRGB(181,201,219),
- green=Color3.fromRGB(96,212,174)
+ bg = Color3.fromRGB(10, 30, 46),
+ side = Color3.fromRGB(8, 25, 39),
+ panel = Color3.fromRGB(17, 43, 63),
+ panel2 = Color3.fromRGB(21, 51, 75),
+ line = Color3.fromRGB(49, 84, 111),
+ lineSoft = Color3.fromRGB(36, 67, 91),
+ blue = Color3.fromRGB(46, 96, 133),
+ blueDeep = Color3.fromRGB(31, 74, 108),
+ bright = Color3.fromRGB(78, 153, 226),
+ text = Color3.fromRGB(244, 239, 226),
+ muted = Color3.fromRGB(182, 202, 219),
+ muted2 = Color3.fromRGB(137, 166, 190),
+ green = Color3.fromRGB(99, 220, 179)
 }
+
 local function make(class, parent, props)
- local o=Instance.new(class)
- for k,v in pairs(props or {}) do o[k]=v end
- o.Parent=parent
+ local o = Instance.new(class)
+ for k, v in pairs(props or {}) do o[k] = v end
+ o.Parent = parent
  return o
 end
-local function round(o,r)
- local old=o:FindFirstChildOfClass("UICorner")
- if old then old.CornerRadius=UDim.new(0,r or 10) return end
- make("UICorner",o,{CornerRadius=UDim.new(0,r or 10)})
+
+local function round(o, r)
+ local old = o:FindFirstChildOfClass("UICorner")
+ if old then
+  old.CornerRadius = UDim.new(0, r or 10)
+  return old
+ end
+ return make("UICorner", o, {CornerRadius = UDim.new(0, r or 10)})
 end
-local function frame(parent, color)
- local o=make("Frame",parent,{BackgroundColor3=color or C.panel,BorderSizePixel=0})
- round(o)
- make("UIStroke",o,{Color=C.line,Thickness=1,Transparency=0.25})
+
+local function stroke(o, color, transparency, thickness)
+ return make("UIStroke", o, {
+  Color = color or C.line,
+  Thickness = thickness or 1,
+  Transparency = transparency == nil and 0.28 or transparency
+ })
+end
+
+local function frame(parent, color, radius)
+ local o = make("Frame", parent, {
+  BackgroundColor3 = color or C.panel,
+  BorderSizePixel = 0
+ })
+ round(o, radius or 10)
+ stroke(o)
  return o
 end
+
 local function text(parent, value, size, color)
- return make("TextLabel",parent,{BackgroundTransparency=1,Text=value,TextSize=size or 14,
- TextColor3=color or C.text,Font=Enum.Font.Gotham,TextXAlignment=Enum.TextXAlignment.Left,
- TextYAlignment=Enum.TextYAlignment.Center,TextWrapped=true,Size=UDim2.new(1,0,0,24)})
+ return make("TextLabel", parent, {
+  BackgroundTransparency = 1,
+  Text = value,
+  TextSize = size or 14,
+  TextColor3 = color or C.text,
+  Font = Enum.Font.Gotham,
+  TextXAlignment = Enum.TextXAlignment.Left,
+  TextYAlignment = Enum.TextYAlignment.Center,
+  TextWrapped = true,
+  Size = UDim2.new(1, 0, 0, 24)
+ })
 end
-local function button(parent,value)
- local b=make("TextButton",parent,{Text=value,TextSize=14,Font=Enum.Font.GothamMedium,
- TextColor3=C.text,BackgroundColor3=C.blue,BorderSizePixel=0,AutoButtonColor=true})
- round(b,8)
+
+local function button(parent, value, color)
+ local b = make("TextButton", parent, {
+  Text = value,
+  TextSize = 14,
+  Font = Enum.Font.GothamMedium,
+  TextColor3 = C.text,
+  BackgroundColor3 = color or C.blue,
+  BorderSizePixel = 0,
+  AutoButtonColor = true
+ })
+ round(b, 8)
  return b
 end
-local function pad(parent,n)
- make("UIPadding",parent,{PaddingLeft=UDim.new(0,n),PaddingRight=UDim.new(0,n),
- PaddingTop=UDim.new(0,n),PaddingBottom=UDim.new(0,n)})
+
+local function pad(parent, left, right, top, bottom)
+ if right == nil then right = left end
+ if top == nil then top = left end
+ if bottom == nil then bottom = top end
+ return make("UIPadding", parent, {
+  PaddingLeft = UDim.new(0, left),
+  PaddingRight = UDim.new(0, right),
+  PaddingTop = UDim.new(0, top),
+  PaddingBottom = UDim.new(0, bottom)
+ })
 end
-local function list(parent,gap)
- return make("UIListLayout",parent,{Padding=UDim.new(0,gap or 8),SortOrder=Enum.SortOrder.LayoutOrder})
+
+local function list(parent, gap)
+ return make("UIListLayout", parent, {
+  Padding = UDim.new(0, gap or 8),
+  SortOrder = Enum.SortOrder.LayoutOrder
+ })
 end
--- Draw icons using GUI geometry; no font-dependent symbols or remote assets.
-local function icon(parent,kind,x,y,size,color)
- local root=make("Frame",parent,{Name="Icon_"..kind,BackgroundTransparency=1,Position=UDim2.fromOffset(x,y),Size=UDim2.fromOffset(size,size)})
- local c=color or C.muted
- local function line(x1,y1,x2,y2)
-  local dx,dy=x2-x1,y2-y1
-  make("Frame",root,{BorderSizePixel=0,BackgroundColor3=c,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale((x1+x2)/2,(y1+y2)/2),Size=UDim2.new(0,math.sqrt(dx*dx+dy*dy)*size,0,1.5),Rotation=math.deg(math.atan2(dy,dx))})
+
+local function separator(parent, y)
+ return make("Frame", parent, {
+  BackgroundColor3 = C.lineSoft,
+  BackgroundTransparency = 0.18,
+  BorderSizePixel = 0,
+  Position = UDim2.new(0, 0, 1, y or -1),
+  Size = UDim2.new(1, 0, 0, 1)
+ })
+end
+
+-- Draw icons using native GUI geometry only; no remote assets.
+local function icon(parent, kind, x, y, size, color)
+ local root = make("Frame", parent, {
+  Name = "Icon_" .. kind,
+  BackgroundTransparency = 1,
+  Position = UDim2.fromOffset(x, y),
+  Size = UDim2.fromOffset(size, size)
+ })
+ local c = color or C.muted
+ local function line(x1, y1, x2, y2, thickness)
+  local dx, dy = x2 - x1, y2 - y1
+  make("Frame", root, {
+   BorderSizePixel = 0,
+   BackgroundColor3 = c,
+   AnchorPoint = Vector2.new(0.5, 0.5),
+   Position = UDim2.fromScale((x1 + x2) / 2, (y1 + y2) / 2),
+   Size = UDim2.new(0, math.sqrt(dx * dx + dy * dy) * size, 0, thickness or 1.6),
+   Rotation = math.deg(math.atan2(dy, dx))
+  })
  end
- local function box(x1,y1,w,h,r)
-  local f=make("Frame",root,{BackgroundTransparency=1,Position=UDim2.fromScale(x1,y1),Size=UDim2.fromScale(w,h)})
-  round(f,r or 2) make("UIStroke",f,{Color=c,Thickness=1.4}) return f
+ local function box(x1, y1, w, h, r)
+  local f = make("Frame", root, {
+   BackgroundTransparency = 1,
+   Position = UDim2.fromScale(x1, y1),
+   Size = UDim2.fromScale(w, h)
+  })
+  round(f, r or 2)
+  stroke(f, c, 0, 1.4)
+  return f
  end
- if kind=="star" then
-  -- Eight straight edges form a small, crisp four-point sparkle.
-  local points={{.5,.03},{.61,.38},{.97,.5},{.61,.62},{.5,.97},{.39,.62},{.03,.5},{.39,.38}}
-  for i,p in ipairs(points) do local q=points[i%#points+1] line(p[1],p[2],q[1],q[2]) end
- elseif kind=="Dashboard" then for _,v in ipairs({{.12,.12},{.58,.12},{.12,.58},{.58,.58}}) do box(v[1],v[2],.29,.29) end
- elseif kind=="About" or kind=="clock" then
+ if kind == "star" then
+  local points = {{.5,.03},{.61,.38},{.97,.5},{.61,.62},{.5,.97},{.39,.62},{.03,.5},{.39,.38}}
+  for i, p in ipairs(points) do
+   local q = points[i % #points + 1]
+   line(p[1], p[2], q[1], q[2], 1.7)
+  end
+ elseif kind == "Dashboard" then
+  for _, v in ipairs({{.12,.12},{.58,.12},{.12,.58},{.58,.58}}) do box(v[1],v[2],.29,.29) end
+ elseif kind == "About" or kind == "clock" then
   box(.08,.08,.84,.84,100)
-  if kind=="clock" then line(.5,.25,.5,.5) line(.5,.5,.7,.65) else line(.5,.46,.5,.73) box(.47,.26,.05,.05) end
- elseif kind=="Automation" then line(.1,.75,.4,.45) line(.4,.45,.6,.62) line(.6,.62,.9,.2) line(.65,.2,.9,.2) line(.9,.2,.9,.45)
- elseif kind=="Inventory" then box(.1,.24,.8,.65) line(.1,.43,.9,.43) line(.36,.12,.64,.12) line(.36,.12,.36,.24) line(.64,.12,.64,.24)
- elseif kind=="Settings" then
-  for i,v in ipairs({.23,.5,.77}) do line(.1,v,.9,v) local x=i==2 and .65 or .35 box(x-.08,v-.09,.16,.18,3) end
- elseif kind=="user" then box(.34,.1,.32,.32,100) box(.17,.55,.66,.35,7)
- elseif kind=="doc" then box(.22,.1,.56,.8) line(.35,.35,.65,.35) line(.35,.5,.65,.5) line(.35,.65,.58,.65)
- elseif kind=="down" then line(.22,.35,.5,.65) line(.5,.65,.78,.35)
- elseif kind=="close" then line(.25,.25,.75,.75) line(.25,.75,.75,.25)
- elseif kind=="minus" then line(.2,.5,.8,.5)
+  if kind == "clock" then
+   line(.5,.25,.5,.5)
+   line(.5,.5,.7,.65)
+  else
+   line(.5,.46,.5,.73)
+   box(.47,.26,.05,.05)
+  end
+ elseif kind == "Automation" then
+  line(.1,.75,.4,.45)
+  line(.4,.45,.6,.62)
+  line(.6,.62,.9,.2)
+  line(.65,.2,.9,.2)
+  line(.9,.2,.9,.45)
+ elseif kind == "Inventory" then
+  box(.1,.24,.8,.65)
+  line(.1,.43,.9,.43)
+  line(.36,.12,.64,.12)
+  line(.36,.12,.36,.24)
+  line(.64,.12,.64,.24)
+ elseif kind == "Settings" then
+  for i, v in ipairs({.23,.5,.77}) do
+   line(.1,v,.9,v)
+   local px = i == 2 and .65 or .35
+   box(px-.08,v-.09,.16,.18,3)
+  end
+ elseif kind == "user" then
+  box(.34,.1,.32,.32,100)
+  box(.17,.55,.66,.35,7)
+ elseif kind == "doc" then
+  box(.22,.1,.56,.8)
+  line(.35,.35,.65,.35)
+  line(.35,.5,.65,.5)
+  line(.35,.65,.58,.65)
+ elseif kind == "down" then
+  line(.22,.35,.5,.65)
+  line(.5,.65,.78,.35)
+ elseif kind == "close" then
+  line(.25,.25,.75,.75)
+  line(.25,.75,.75,.25)
+ elseif kind == "minus" then
+  line(.2,.5,.8,.5)
  end
  return root
 end
-local shell=frame(gui,C.bg)
-shell.AnchorPoint=Vector2.new(0.5,0.5)
-shell.Position=UDim2.fromScale(0.5,0.5)
-local header=make("Frame",shell,{BackgroundColor3=C.side,BorderSizePixel=0,Size=UDim2.new(1,0,0,48)})
-round(header,12)
--- Solid header avoids multiplying dark gradient colors into the base fill.
-icon(header,"star",14,12,24,C.text)
-local title=text(header,"SERENITY HUB",22)
-title.Font=Enum.Font.GothamBold
-title.Position=UDim2.fromOffset(46,7)
-title.Size=UDim2.new(1,-150,0,36)
-local mini=button(header,"")
-icon(mini,"minus",7,7,18)
-mini.Size=UDim2.fromOffset(32,32)
-mini.Position=UDim2.new(1,-78,0,8)
-local close=button(header,"")
-icon(close,"close",7,7,18)
-close.Size=UDim2.fromOffset(32,32)
-close.Position=UDim2.new(1,-40,0,8)
-on(close.Activated,cleanup)
-local sidebar=make("Frame",shell,{BackgroundColor3=C.side,BorderSizePixel=0})
-round(sidebar,12)
--- Fill the upper corner only; preserve the shell's lower-left rounding.
-make("Frame",sidebar,{BackgroundColor3=C.side,BorderSizePixel=0,Size=UDim2.new(1,0,0,12)})
-make("Frame",sidebar,{BackgroundColor3=C.line,BackgroundTransparency=.5,BorderSizePixel=0,Position=UDim2.new(1,-1,0,12),Size=UDim2.new(0,1,1,-24)})
-make("Frame",header,{BackgroundColor3=C.line,BackgroundTransparency=.4,BorderSizePixel=0,Position=UDim2.new(0,12,1,-1),Size=UDim2.new(1,-24,0,1)})
-local nav=make("Frame",sidebar,{BackgroundTransparency=1,Size=UDim2.new(1,0,1,-48)})
-pad(nav,8)
-local navLayout=list(nav,7)
-local foot=text(sidebar,"PC preview · v5",12,C.muted)
-foot.Position=UDim2.new(0,12,1,-40)
-foot.Size=UDim2.new(1,-24,0,32)
-local body=make("ScrollingFrame",shell,{BackgroundTransparency=1,BorderSizePixel=0,
- ScrollBarThickness=4,ScrollBarImageColor3=C.blue,CanvasSize=UDim2.new(),
- AutomaticCanvasSize=Enum.AutomaticSize.Y,ScrollingDirection=Enum.ScrollingDirection.Y})
-pad(body,12)
-list(body,8)
-local pageHead=make("Frame",body,{BackgroundTransparency=1,Size=UDim2.new(1,0,0,46),LayoutOrder=1})
-local heading=text(pageHead,"Dashboard",23)
-heading.Font=Enum.Font.GothamBold
-heading.Size=UDim2.new(1,0,0,30)
-heading.LayoutOrder=1
-local subtitle=text(pageHead,"Design preview / no gameplay actions",13,C.muted)
-subtitle.Position=UDim2.fromOffset(0,27)
-subtitle.Size=UDim2.new(1,0,0,19)
-local stats=make("Frame",body,{BackgroundTransparency=1,Size=UDim2.new(1,0,0,64),LayoutOrder=3})
-local statCards={}
-for i,info in ipairs({{"Session","Preview"},{"Active now","—"},{"Status","UI only"}}) do
- local card=frame(stats)
- card.Size=UDim2.new(1/3,-6,1,0)
- card.Position=UDim2.new((i-1)/3, (i-1)*3,0,0)
- icon(card,i==1 and "clock" or i==2 and "user" or "Automation",10,21,22,i==3 and C.green or C.muted)
- local label=text(card,info[1],12,C.muted)
- label.Position=UDim2.fromOffset(42,8)
- label.Size=UDim2.new(1,-48,0,20)
- local value=text(card,info[2],20,i==3 and C.green or C.text)
- value.Position=UDim2.fromOffset(42,29)
- value.Size=UDim2.new(1,-48,0,24)
- value.Font=Enum.Font.GothamBold
- statCards[i]=card
+
+local shell = frame(gui, C.bg, 12)
+shell.AnchorPoint = Vector2.new(0.5, 0.5)
+shell.Position = UDim2.fromScale(0.5, 0.5)
+local shellStroke = shell:FindFirstChildOfClass("UIStroke")
+if shellStroke then
+ shellStroke.Color = Color3.fromRGB(58, 105, 141)
+ shellStroke.Transparency = 0.12
+ shellStroke.Thickness = 1.2
 end
-local welcome=frame(body,C.blue)
-welcome.LayoutOrder=4
-welcome.Size=UDim2.new(1,0,0,46)
-icon(welcome,"star",12,12,22,C.text)
-local welcomeText=text(welcome,"Welcome back. Make yourself at home.",14)
-welcomeText.Position=UDim2.fromOffset(44,6)
-welcomeText.Size=UDim2.new(1,-56,1,-12)
-local columns=make("Frame",body,{Name="Columns",BackgroundTransparency=1,Size=UDim2.new(1,0,0,294),LayoutOrder=5})
-local controls=frame(columns)
-controls.LayoutOrder=5
-controls.AutomaticSize=Enum.AutomaticSize.Y
-controls.Size=UDim2.new(1,0,0,0)
-pad(controls,12)
-list(controls,4)
-local controlTitle=text(controls,"Quick settings",17)
-controlTitle.Font=Enum.Font.GothamBold
-local rowOrder=0
-local function row(label,height)
- rowOrder=rowOrder+1
- local r=make("Frame",controls,{BackgroundTransparency=1,Size=UDim2.new(1,0,0,height or 36),LayoutOrder=rowOrder})
- local l=text(r,label,15)
- l.Size=UDim2.new(1,-120,1,0)
- if height then l.Size=UDim2.new(1,-120,0,28) end
+
+local header = make("Frame", shell, {
+ BackgroundColor3 = Color3.fromRGB(12, 35, 52),
+ BorderSizePixel = 0,
+ Size = UDim2.new(1, 0, 0, 56)
+})
+round(header, 12)
+-- Fill lower header corners so only the shell controls outer rounding.
+make("Frame", header, {
+ BackgroundColor3 = Color3.fromRGB(12, 35, 52),
+ BorderSizePixel = 0,
+ Position = UDim2.new(0, 0, 1, -12),
+ Size = UDim2.new(1, 0, 0, 12)
+})
+icon(header, "star", 16, 15, 26, C.text)
+
+local title = text(header, "SERENITY HUB", 21)
+title.Font = Enum.Font.GothamBold
+title.Position = UDim2.fromOffset(52, 9)
+title.Size = UDim2.new(0, 190, 0, 38)
+
+local previewPill = make("Frame", header, {
+ BackgroundColor3 = C.blueDeep,
+ BorderSizePixel = 0,
+ Position = UDim2.fromOffset(220, 15),
+ Size = UDim2.fromOffset(76, 28)
+})
+round(previewPill, 14)
+stroke(previewPill, C.bright, 0.42, 1)
+local previewText = text(previewPill, "Preview", 12, C.muted)
+previewText.TextXAlignment = Enum.TextXAlignment.Center
+previewText.Size = UDim2.fromScale(1, 1)
+
+local mini = button(header, "", C.blueDeep)
+mini.Size = UDim2.fromOffset(34, 34)
+mini.Position = UDim2.new(1, -82, 0, 11)
+icon(mini, "minus", 8, 8, 18, C.muted)
+
+local close = button(header, "", C.blueDeep)
+close.Size = UDim2.fromOffset(34, 34)
+close.Position = UDim2.new(1, -42, 0, 11)
+icon(close, "close", 8, 8, 18, C.muted)
+on(close.Activated, cleanup)
+
+local sidebar = make("Frame", shell, {
+ BackgroundColor3 = C.side,
+ BorderSizePixel = 0
+})
+round(sidebar, 12)
+make("Frame", sidebar, {BackgroundColor3=C.side, BorderSizePixel=0, Size=UDim2.new(1,0,0,12)})
+make("Frame", sidebar, {
+ BackgroundColor3 = C.line,
+ BackgroundTransparency = .48,
+ BorderSizePixel = 0,
+ Position = UDim2.new(1, -1, 0, 10),
+ Size = UDim2.new(0, 1, 1, -20)
+})
+make("Frame", header, {
+ BackgroundColor3 = C.line,
+ BackgroundTransparency = .4,
+ BorderSizePixel = 0,
+ Position = UDim2.new(0, 12, 1, -1),
+ Size = UDim2.new(1, -24, 0, 1)
+})
+
+local nav = make("Frame", sidebar, {BackgroundTransparency=1})
+pad(nav, 9, 9, 10, 8)
+local navLayout = list(nav, 6)
+
+local sidebarCard = frame(sidebar, C.panel, 9)
+sidebarCard.AnchorPoint = Vector2.new(0, 1)
+sidebarCard.Position = UDim2.new(0, 10, 1, -12)
+sidebarCard.Size = UDim2.new(1, -20, 0, 68)
+icon(sidebarCard, "user", 12, 17, 26, C.muted)
+local sideCardTitle = text(sidebarCard, "Preview mode", 13)
+sideCardTitle.Font = Enum.Font.GothamMedium
+sideCardTitle.Position = UDim2.fromOffset(47, 9)
+sideCardTitle.Size = UDim2.new(1, -55, 0, 24)
+local sideCardSub = text(sidebarCard, "UI only", 12, C.green)
+sideCardSub.Position = UDim2.fromOffset(47, 31)
+sideCardSub.Size = UDim2.new(1, -55, 0, 21)
+local dot = make("Frame", sidebarCard, {
+ BackgroundColor3 = C.green,
+ BorderSizePixel = 0,
+ Position = UDim2.fromOffset(47, 39),
+ Size = UDim2.fromOffset(7, 7)
+})
+round(dot, 7)
+sideCardSub.Position = UDim2.fromOffset(59, 31)
+
+local foot = text(sidebar, "PC preview · v6", 11, C.muted2)
+foot.AnchorPoint = Vector2.new(0, 1)
+foot.Position = UDim2.new(0, 14, 1, -86)
+foot.Size = UDim2.new(1, -28, 0, 20)
+
+local body = make("ScrollingFrame", shell, {
+ BackgroundTransparency = 1,
+ BorderSizePixel = 0,
+ ScrollBarThickness = 4,
+ ScrollBarImageColor3 = C.blue,
+ CanvasSize = UDim2.new(),
+ AutomaticCanvasSize = Enum.AutomaticSize.Y,
+ ScrollingDirection = Enum.ScrollingDirection.Y
+})
+pad(body, 14)
+list(body, 10)
+
+local pageHead = make("Frame", body, {
+ BackgroundTransparency = 1,
+ Size = UDim2.new(1,0,0,54),
+ LayoutOrder = 1
+})
+local heading = text(pageHead, "Dashboard", 25)
+heading.Font = Enum.Font.GothamBold
+heading.Size = UDim2.new(1,0,0,31)
+local subtitle = text(pageHead, "Design preview / no gameplay actions", 13, C.muted)
+subtitle.Position = UDim2.fromOffset(0, 31)
+subtitle.Size = UDim2.new(1,0,0,20)
+
+local stats = make("Frame", body, {
+ BackgroundTransparency = 1,
+ Size = UDim2.new(1,0,0,76),
+ LayoutOrder = 3
+})
+local statCards = {}
+local statData = {{"Session","Preview","clock"},{"Active now","—","user"},{"Status","UI only","Automation"}}
+for i, info in ipairs(statData) do
+ local card = frame(stats, C.panel, 10)
+ card.Size = UDim2.new(1/3, -7, 1, 0)
+ card.Position = UDim2.new((i-1)/3, (i-1)*3.5, 0, 0)
+ local tile = make("Frame", card, {
+  BackgroundColor3 = i == 3 and Color3.fromRGB(19, 68, 67) or C.blueDeep,
+  BorderSizePixel = 0,
+  Position = UDim2.fromOffset(12, 18),
+  Size = UDim2.fromOffset(38, 38)
+ })
+ round(tile, 9)
+ icon(tile, info[3], 8, 8, 22, i == 3 and C.green or C.muted)
+ local label = text(card, info[1], 12, C.muted)
+ label.Position = UDim2.fromOffset(60, 10)
+ label.Size = UDim2.new(1, -68, 0, 22)
+ local value = text(card, info[2], 20, i == 3 and C.green or C.text)
+ value.Position = UDim2.fromOffset(60, 31)
+ value.Size = UDim2.new(1, -68, 0, 30)
+ value.Font = Enum.Font.GothamBold
+ statCards[i] = card
+end
+
+local welcome = frame(body, C.panel:Lerp(C.blue, .65), 10)
+welcome.LayoutOrder = 4
+welcome.Size = UDim2.new(1,0,0,56)
+icon(welcome, "star", 14, 14, 27, C.text)
+local welcomeTitle = text(welcome, "Welcome back", 15)
+welcomeTitle.Font = Enum.Font.GothamBold
+welcomeTitle.Position = UDim2.fromOffset(53, 7)
+welcomeTitle.Size = UDim2.new(1,-65,0,23)
+local welcomeText = text(welcome, "Choose a category to continue exploring the preview.", 12, C.muted)
+welcomeText.Position = UDim2.fromOffset(53, 28)
+welcomeText.Size = UDim2.new(1,-65,0,20)
+
+local columns = make("Frame", body, {
+ Name = "Columns",
+ BackgroundTransparency = 1,
+ Size = UDim2.new(1,0,0,300),
+ LayoutOrder = 5
+})
+
+local controls = frame(columns, C.panel, 10)
+controls.AutomaticSize = Enum.AutomaticSize.Y
+controls.Size = UDim2.new(1,0,0,0)
+pad(controls, 13)
+list(controls, 0)
+local controlTitle = text(controls, "Quick settings", 17)
+controlTitle.Font = Enum.Font.GothamBold
+controlTitle.LayoutOrder = 0
+controlTitle.Size = UDim2.new(1,0,0,34)
+
+local rowOrder = 0
+local function row(label, description, height)
+ rowOrder += 1
+ local h = height or 50
+ local r = make("Frame", controls, {
+  BackgroundTransparency = 1,
+  Size = UDim2.new(1,0,0,h),
+  LayoutOrder = rowOrder
+ })
+ local l = text(r, label, 14)
+ l.Font = Enum.Font.GothamMedium
+ l.Position = UDim2.fromOffset(0, 4)
+ l.Size = UDim2.new(1,-128,0,23)
+ if description then
+  local d = text(r, description, 12, C.muted)
+  d.Position = UDim2.fromOffset(0, 24)
+  d.Size = UDim2.new(1,-128,0,20)
+ end
+ separator(r, -1)
  return r
 end
-local function toggle(label,initial,callback)
- local r=row(label)
- local b=button(r,"")
- b.Size=UDim2.fromOffset(44,24)
- b.Position=UDim2.new(1,-44,0.5,-12)
- round(b,14)
- local knob=make("Frame",b,{Size=UDim2.fromOffset(18,18),BackgroundColor3=C.text,BorderSizePixel=0})
- round(knob,11)
- local value=initial
+
+local function toggle(label, description, initial, callback)
+ local r = row(label, description, 52)
+ local b = button(r, "", C.line)
+ b.Size = UDim2.fromOffset(46, 26)
+ b.Position = UDim2.new(1, -46, 0.5, -13)
+ round(b, 14)
+ local knob = make("Frame", b, {
+  Size = UDim2.fromOffset(20,20),
+  BackgroundColor3 = C.text,
+  BorderSizePixel = 0
+ })
+ round(knob, 11)
+ local value = initial
  local function paint()
-  b.BackgroundColor3=value and C.bright or C.line
-  knob.Position=UDim2.fromOffset(value and 23 or 3,3)
+  b.BackgroundColor3 = value and C.bright or C.line
+  knob.Position = UDim2.fromOffset(value and 23 or 3, 3)
+ end
+ local function flip()
+  value = not value
+  paint()
+  if callback then callback(value) end
  end
  paint()
- local hit=make("TextButton",r,{Name="ToggleHit",Text="",BackgroundTransparency=1,Size=UDim2.fromScale(1,1),ZIndex=3})
- on(hit.Activated,function() value=not value paint() if callback then callback(value) end end)
- -- Keep a direct activation handler for gamepad focus on the switch.
- on(b.Activated,function() value=not value paint() if callback then callback(value) end end)
+ local hit = make("TextButton", r, {
+  Name = "ToggleHit",
+  Text = "",
+  BackgroundTransparency = 1,
+  Size = UDim2.fromScale(1,1),
+  ZIndex = 3
+ })
+ on(hit.Activated, flip)
+ on(b.Activated, flip)
 end
-toggle("Auto collect (demo)",true)
-toggle("Auto sell (demo)",false)
 
-local dropRow=row("Effects (demo)")
-local drop=button(dropRow,"Reduced")
-drop.Size=UDim2.fromOffset(114,34)
-drop.Position=UDim2.new(1,-114,0.5,-17)
-drop.Text=""
-local dropLabel=text(drop,"Reduced",14)
-dropLabel.Position=UDim2.fromOffset(10,0) dropLabel.Size=UDim2.new(1,-34,1,0)
-local dropArrow=icon(drop,"down",92,9,16)
-local choices=make("Frame",controls,{BackgroundTransparency=1,Size=UDim2.new(1,0,0,84),Visible=false,LayoutOrder=rowOrder+1})
-rowOrder=rowOrder+1
-list(choices,6)
-local choiceButtons={}
-for _,label in ipairs({"Reduced","Standard"}) do
- local b=button(choices,label)
- b.Size=UDim2.new(1,0,0,38)
- choiceButtons[label]=b
- b.BackgroundColor3=label=="Reduced" and C.blue or C.side
- on(b.Activated,function()
-  dropLabel.Text=label choices.Visible=false dropArrow.Rotation=0
-  for name,other in pairs(choiceButtons) do other.BackgroundColor3=name==label and C.blue or C.side end
+toggle("Auto collect (demo)", "Layout-only interaction; no gameplay action.", true)
+toggle("Auto sell (demo)", "Preview state only; no items are modified.", false)
+
+local dropRow = row("Effects (demo)", "Visual preference preview only.", 54)
+local drop = button(dropRow, "", C.blueDeep)
+drop.Size = UDim2.fromOffset(122, 34)
+drop.Position = UDim2.new(1, -122, 0.5, -17)
+stroke(drop, C.line, 0.2, 1)
+local dropLabel = text(drop, "Reduced", 13)
+dropLabel.Position = UDim2.fromOffset(11,0)
+dropLabel.Size = UDim2.new(1,-38,1,0)
+local dropArrow = icon(drop, "down", 98, 9, 16, C.muted)
+
+local choices = frame(controls, C.side, 8)
+choices.BackgroundTransparency = 0
+choices.Size = UDim2.new(1,0,0,88)
+choices.Visible = false
+choices.LayoutOrder = rowOrder + 1
+rowOrder += 1
+pad(choices, 6)
+list(choices, 6)
+local choiceButtons = {}
+for _, label in ipairs({"Reduced","Standard"}) do
+ local b = button(choices, label, label == "Reduced" and C.blue or C.side)
+ b.Size = UDim2.new(1,0,0,35)
+ choiceButtons[label] = b
+ on(b.Activated, function()
+  dropLabel.Text = label
+  choices.Visible = false
+  dropArrow.Rotation = 0
+  for name, other in pairs(choiceButtons) do
+   other.BackgroundColor3 = name == label and C.blue or C.side
+  end
  end)
 end
-on(drop.Activated,function() choices.Visible=not choices.Visible dropArrow.Rotation=choices.Visible and 180 or 0 end)
-local sliderRow=row("Accent intensity",56)
-local track=make("TextButton",sliderRow,{Text="",AutoButtonColor=false,BorderSizePixel=0,
- BackgroundColor3=C.line,Position=UDim2.new(0,0,1,-16),Size=UDim2.new(1,-52,0,8)})
-round(track,4)
-local fill=make("Frame",track,{BackgroundColor3=C.bright,BorderSizePixel=0,Size=UDim2.fromScale(0.65,1)})
+on(drop.Activated, function()
+ choices.Visible = not choices.Visible
+ dropArrow.Rotation = choices.Visible and 180 or 0
+end)
+
+local sliderRow = row("Accent intensity", "Adjusts this preview's welcome-strip tint.", 64)
+local track = make("TextButton", sliderRow, {
+ Text = "",
+ AutoButtonColor = false,
+ BorderSizePixel = 0,
+ BackgroundColor3 = C.line,
+ Position = UDim2.new(0,0,1,-17),
+ Size = UDim2.new(1,-55,0,7)
+})
+round(track, 4)
+local fill = make("Frame", track, {
+ BackgroundColor3 = C.bright,
+ BorderSizePixel = 0,
+ Size = UDim2.fromScale(.65,1)
+})
 round(fill,4)
-local knob=make("Frame",track,{BackgroundColor3=C.text,BorderSizePixel=0,Size=UDim2.fromOffset(18,18),
- AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.65,0.5)})
-round(knob,9)
-local pct=text(sliderRow,"65%",12,C.muted)
-pct.Size=UDim2.fromOffset(46,24)
-pct.Position=UDim2.new(1,-46,1,-24)
-local sliderHit=make("TextButton",sliderRow,{Name="SliderHit",Text="",BackgroundTransparency=1,
- Position=UDim2.new(0,0,1,-28),Size=UDim2.new(1,-52,0,28),ZIndex=3})
-welcome.BackgroundColor3=C.panel:Lerp(C.blue,.65)
-local dragging=nil
+local sliderKnob = make("Frame", track, {
+ BackgroundColor3 = C.text,
+ BorderSizePixel = 0,
+ Size = UDim2.fromOffset(18,18),
+ AnchorPoint = Vector2.new(.5,.5),
+ Position = UDim2.fromScale(.65,.5)
+})
+round(sliderKnob,9)
+local pct = text(sliderRow, "65%", 12, C.muted)
+pct.Size = UDim2.fromOffset(48,24)
+pct.Position = UDim2.new(1,-48,1,-26)
+pct.TextXAlignment = Enum.TextXAlignment.Right
+local sliderHit = make("TextButton", sliderRow, {
+ Name = "SliderHit",
+ Text = "",
+ BackgroundTransparency = 1,
+ Position = UDim2.new(0,0,1,-30),
+ Size = UDim2.new(1,-55,0,30),
+ ZIndex = 3
+})
+local dragging = nil
 local function slide(x)
- local v=math.clamp((x-track.AbsolutePosition.X)/math.max(track.AbsoluteSize.X,1),0,1)
- fill.Size=UDim2.fromScale(v,1)
- knob.Position=UDim2.fromScale(v,0.5)
- pct.Text=tostring(math.floor(v*100+0.5)).."%"
- welcome.BackgroundColor3=C.panel:Lerp(C.blue,v)
+ local v = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
+ fill.Size = UDim2.fromScale(v,1)
+ sliderKnob.Position = UDim2.fromScale(v,.5)
+ pct.Text = tostring(math.floor(v * 100 + .5)) .. "%"
+ welcome.BackgroundColor3 = C.panel:Lerp(C.blue, v)
 end
-on(sliderHit.InputBegan,function(input)
- if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
- dragging=input slide(input.Position.X)
+on(sliderHit.InputBegan, function(input)
+ if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+  dragging = input
+  slide(input.Position.X)
  end
 end)
-on(UIS.InputChanged,function(input)
- if dragging and (input==dragging or (dragging.UserInputType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseMovement)) then slide(input.Position.X) end
+on(UIS.InputChanged, function(input)
+ if dragging and (input == dragging or (dragging.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement)) then
+  slide(input.Position.X)
+ end
 end)
-on(UIS.InputEnded,function(input) if input==dragging then dragging=nil end end)
-local updates=frame(columns)
-updates.LayoutOrder=6
-updates.Size=UDim2.new(1,0,0,294)
-pad(updates,14)
-local upd=text(updates,"What's new",17)
-upd.Font=Enum.Font.GothamBold
-local updateRows={}
-for i,info in ipairs({{"New blue theme","Calmer colors, finer borders."},{"Compact navigation","More room for your controls."},{"Desktop typography","Clearer text at native size."}}) do
- local item=make("Frame",updates,{BackgroundTransparency=1,Position=UDim2.fromOffset(0,32+(i-1)*58),Size=UDim2.new(1,0,0,58)})
- icon(item,"doc",0,8,20)
- local a=text(item,info[1],14) a.Font=Enum.Font.GothamMedium a.Position=UDim2.fromOffset(30,0) a.Size=UDim2.new(1,-30,0,24)
- local b=text(item,info[2],13,C.muted) b.Position=UDim2.fromOffset(30,24) b.Size=UDim2.new(1,-30,0,30)
- updateRows[i]=item
+on(UIS.InputEnded, function(input)
+ if input == dragging then dragging = nil end
+end)
+
+local updates = frame(columns, C.panel, 10)
+updates.Size = UDim2.new(1,0,0,284)
+pad(updates, 14)
+local upd = text(updates, "What's new", 17)
+upd.Font = Enum.Font.GothamBold
+upd.Size = UDim2.new(1,0,0,30)
+
+local updateRows = {}
+local updatesData = {
+ {"Refined denim surfaces", "Softer contrast and cleaner borders."},
+ {"Stronger navigation", "Clearer selected states and spacing."},
+ {"Desktop readability", "More room without shrinking native text."}
+}
+for i, info in ipairs(updatesData) do
+ local item = make("Frame", updates, {
+  BackgroundTransparency = 1,
+  Position = UDim2.fromOffset(0, 34 + (i-1)*64),
+  Size = UDim2.new(1,0,0,64)
+ })
+ local tile = make("Frame", item, {
+  BackgroundColor3 = C.blueDeep,
+  BorderSizePixel = 0,
+  Position = UDim2.fromOffset(0, 10),
+  Size = UDim2.fromOffset(34, 34)
+ })
+ round(tile, 8)
+ icon(tile, "doc", 7, 7, 20, C.muted)
+ local a = text(item, info[1], 14)
+ a.Font = Enum.Font.GothamMedium
+ a.Position = UDim2.fromOffset(46, 4)
+ a.Size = UDim2.new(1,-46,0,25)
+ local b = text(item, info[2], 12, C.muted)
+ b.Position = UDim2.fromOffset(46, 27)
+ b.Size = UDim2.new(1,-46,0,26)
+ if i < #updatesData then separator(item, -1) end
+ updateRows[i] = item
 end
-local community=frame(body)
-community.LayoutOrder=6 community.Size=UDim2.new(1,0,0,54)
-icon(community,"user",12,15,22)
-local communityTitle=text(community,"Community",14) communityTitle.Position=UDim2.fromOffset(44,5) communityTitle.Size=UDim2.new(1,-174,0,22)
-local communitySub=text(community,"News and updates",13,C.muted) communitySub.Position=UDim2.fromOffset(44,26) communitySub.Size=UDim2.new(1,-174,0,20)
-local notice=frame(shell,C.panel)
-notice.Visible=false
-notice.ZIndex=10
-local nt=text(notice,"Serenity preview",14)
-nt.ZIndex=11
-nt.Position=UDim2.fromOffset(12,6)
-nt.Size=UDim2.new(1,-50,0,24)
-local nb=text(notice,"Notification placement test.",12,C.muted)
-nb.ZIndex=11
-nb.Position=UDim2.fromOffset(12,31)
-nb.Size=UDim2.new(1,-24,0,30)
-local nx=button(notice,"")
-icon(nx,"close",5,5,18)
-nx.ZIndex=12
-nx.Size=UDim2.fromOffset(28,28)
-nx.Position=UDim2.new(1,-34,0,5)
+
+local community = frame(body, C.panel, 10)
+community.LayoutOrder = 6
+community.Size = UDim2.new(1,0,0,62)
+local communityTile = make("Frame", community, {
+ BackgroundColor3 = C.blueDeep,
+ BorderSizePixel = 0,
+ Position = UDim2.fromOffset(12, 12),
+ Size = UDim2.fromOffset(38,38)
+})
+round(communityTile,9)
+icon(communityTile,"user",8,8,22,C.muted)
+local communityTitle = text(community,"Community",14)
+communityTitle.Font = Enum.Font.GothamMedium
+communityTitle.Position = UDim2.fromOffset(61,7)
+communityTitle.Size = UDim2.new(1,-190,0,23)
+local communitySub = text(community,"News and updates preview",12,C.muted)
+communitySub.Position = UDim2.fromOffset(61,29)
+communitySub.Size = UDim2.new(1,-190,0,21)
+
+local notice = frame(shell, C.panel2, 10)
+notice.Visible = false
+notice.ZIndex = 20
+local nt = text(notice,"Serenity preview",14)
+nt.Font = Enum.Font.GothamBold
+nt.ZIndex = 21
+nt.Position = UDim2.fromOffset(12,5)
+nt.Size = UDim2.new(1,-48,0,24)
+local nb = text(notice,"Notification placement test only.",12,C.muted)
+nb.ZIndex = 21
+nb.Position = UDim2.fromOffset(12,29)
+nb.Size = UDim2.new(1,-24,0,30)
+local nx = button(notice,"",C.blueDeep)
+nx.ZIndex = 22
+nx.Size = UDim2.fromOffset(28,28)
+nx.Position = UDim2.new(1,-34,0,6)
+icon(nx,"close",5,5,18,C.muted)
 on(nx.Activated,function() notice.Visible=false end)
-local test=button(community,"Test notice")
-test.LayoutOrder=7
-test.Size=UDim2.fromOffset(102,32)
-test.Position=UDim2.new(1,-112,0,11)
-on(test.Activated,function() notice.Visible=not notice.Visible end)
-local inventoryInfo=frame(body)
-inventoryInfo.LayoutOrder=5 inventoryInfo.Size=UDim2.new(1,0,0,116) inventoryInfo.Visible=false
+
+local test = button(community,"Test notice",C.blue)
+test.Size = UDim2.fromOffset(108,34)
+test.Position = UDim2.new(1,-120,0,14)
+on(test.Activated,function() notice.Visible = not notice.Visible end)
+
+local inventoryInfo = frame(body, C.panel, 10)
+inventoryInfo.LayoutOrder = 5
+inventoryInfo.Size = UDim2.new(1,0,0,126)
+inventoryInfo.Visible = false
 pad(inventoryInfo,16)
-local inventoryTitle=text(inventoryInfo,"Inventory preview",18) inventoryTitle.Font=Enum.Font.GothamBold
-local inventoryDesc=text(inventoryInfo,"This isolated UI test does not read or modify your items. Use Dashboard to compare the same controls in each font.",14,C.muted)
-inventoryDesc.Position=UDim2.fromOffset(0,32) inventoryDesc.Size=UDim2.new(1,0,0,64)
-local fontBar=frame(body)
-fontBar.Visible=false
-fontBar.Name="FontComparison" fontBar.LayoutOrder=2 fontBar.Size=UDim2.new(1,0,0,72)
-local fontStatus=text(fontBar,"Compare fonts: A / Builder Sans",12,C.muted)
-fontStatus.Position=UDim2.fromOffset(10,5) fontStatus.Size=UDim2.new(1,-20,0,20)
-local fontOptions={
+local inventoryTitle = text(inventoryInfo,"Inventory preview",18)
+inventoryTitle.Font = Enum.Font.GothamBold
+local inventoryDesc = text(inventoryInfo,"This isolated visual test does not read or modify your items. It exists only to evaluate layout, typography, controls, and spacing.",14,C.muted)
+inventoryDesc.Position = UDim2.fromOffset(0,34)
+inventoryDesc.Size = UDim2.new(1,0,0,70)
+
+local fontBar = frame(body, C.panel, 10)
+fontBar.Visible = false
+fontBar.Name = "FontComparison"
+fontBar.LayoutOrder = 2
+fontBar.Size = UDim2.new(1,0,0,82)
+local fontStatus = text(fontBar,"Selected font: Ubuntu",12,C.muted)
+fontStatus.Position = UDim2.fromOffset(11,5)
+fontStatus.Size = UDim2.new(1,-22,0,21)
+local fontOptions = {
  {label="Roboto",name="Roboto",family="Roboto"},
  {label="Montserrat",name="Montserrat",family="Montserrat"},
  {label="Ubuntu",name="Ubuntu",family="Ubuntu"}
 }
-local fontButtons={}
-for i,option in ipairs(fontOptions) do
- local b=button(fontBar,option.label)
- b.Position=UDim2.new((i-1)/3,6,0,30) b.Size=UDim2.new(1/3,-12,0,34)
- fontButtons[i]=b
+local fontButtons = {}
+for i, option in ipairs(fontOptions) do
+ local b = button(fontBar,option.label,C.side)
+ b.Position = UDim2.new((i-1)/3,7,0,33)
+ b.Size = UDim2.new(1/3,-14,0,38)
+ stroke(b,C.line,0.3,1)
+ fontButtons[i] = b
 end
-local navButtons={}
-local navIcons={}
-local navMarkers={}
-local selected="Dashboard"
+
+local navButtons = {}
+local navIcons = {}
+local navMarkers = {}
+local navLabels = {}
+local selected = "Dashboard"
 local arrangeColumns
-local navLabels={}
-for _,name in ipairs({"About","Dashboard","Automation","Inventory","Settings"}) do
- local b=button(nav,name)
- b.TextXAlignment=Enum.TextXAlignment.Left
- navIcons[name]=icon(b,name,10,10,18)
- b.Text=""
- local caption=text(b,name,15)
- caption.Position=UDim2.fromOffset(38,0) caption.Size=UDim2.new(1,-44,1,0)
- navLabels[name]=caption
- navButtons[name]=b
- local mark=make("Frame",b,{BackgroundColor3=C.text,BorderSizePixel=0,Position=UDim2.fromOffset(0,10),Size=UDim2.fromOffset(3,18),Visible=name=="Dashboard"})
- round(mark,2) navMarkers[name]=mark
+
+for _, name in ipairs({"About","Dashboard","Automation","Inventory","Settings"}) do
+ local b = button(nav,"",C.side)
+ b.Size = UDim2.new(1,0,0,42)
+ navIcons[name] = icon(b,name,11,11,20,name=="Dashboard" and C.text or C.muted)
+ local caption = text(b,name,15)
+ caption.Position = UDim2.fromOffset(41,0)
+ caption.Size = UDim2.new(1,-48,1,0)
+ navLabels[name] = caption
+ navButtons[name] = b
+ local mark = make("Frame",b,{
+  BackgroundColor3 = C.bright,
+  BorderSizePixel = 0,
+  Position = UDim2.fromOffset(0,8),
+  Size = UDim2.fromOffset(4,26),
+  Visible = name == "Dashboard"
+ })
+ round(mark,2)
+ navMarkers[name] = mark
  on(b.Activated,function()
-  selected=name
-  choices.Visible=false dropArrow.Rotation=0
-  fontBar.Visible=name=="Settings"
-  stats.Visible=name=="Dashboard" or name=="About"
-  welcome.Visible=name=="Dashboard" or name=="About"
-  columns.Visible=name~="Inventory"
-  test.Visible=true
-  controls.Visible=name~="About"
-  updates.Visible=name=="Dashboard" or name=="About"
-  community.Visible=name=="Dashboard" or name=="About"
-  inventoryInfo.Visible=name=="Inventory"
-  heading.Text=name
+  selected = name
+  choices.Visible = false
+  dropArrow.Rotation = 0
+  fontBar.Visible = name == "Settings"
+  stats.Visible = name == "Dashboard" or name == "About"
+  welcome.Visible = name == "Dashboard" or name == "About"
+  columns.Visible = name ~= "Inventory"
+  controls.Visible = name ~= "About"
+  updates.Visible = name == "Dashboard" or name == "About"
+  community.Visible = name == "Dashboard" or name == "About"
+  inventoryInfo.Visible = name == "Inventory"
+  heading.Text = name
   if arrangeColumns then arrangeColumns() end
-  subtitle.Text=name=="Dashboard" and "Design preview / no gameplay actions" or name.." layout preview • No gameplay actions"
-  for n,other in pairs(navButtons) do other.BackgroundColor3=n==name and C.blue or C.side navMarkers[n].Visible=n==name navLabels[n].TextColor3=n==name and C.text or C.muted end
-  body.CanvasPosition=Vector2.new(0,0)
- end)
- b.BackgroundColor3=name=="Dashboard" and C.blue or C.side
- caption.TextColor3=name=="Dashboard" and C.text or C.muted
-end
-local minimized=false
-local function layout()
- local vp=gui.AbsoluteSize
- if vp.X<1 or vp.Y<1 then vp=workspace.CurrentCamera.ViewportSize end
- local w=math.min(820,math.floor(vp.X*0.84))
- if vp.X<600 then w=vp.X-24 end
- local h=math.min(580,math.floor(vp.Y*0.84))
- local narrow=w<620
- local compactNav=w<700
- local sideWidth=compactNav and 52 or 146
- shell.Size=UDim2.fromOffset(w,minimized and 48 or h)
- sidebar.Visible=not minimized body.Visible=not minimized
- sidebar.Position=UDim2.fromOffset(0,48) sidebar.Size=UDim2.new(0,sideWidth,1,-48)
- nav.Size=UDim2.new(1,0,1,-44)
- navLayout.FillDirection=Enum.FillDirection.Vertical navLayout.Padding=UDim.new(0,5)
- foot.Visible=not compactNav
- for name,b in pairs(navButtons) do
-  b.Size=UDim2.new(1,0,0,38) b.Text=""
-  navLabels[name].Visible=not compactNav
-  navIcons[name].Position=UDim2.fromOffset(compactNav and 9 or 10,10)
- end
- body.Position=UDim2.fromOffset(sideWidth,48) body.Size=UDim2.new(1,-sideWidth,1,-48)
- if arrangeColumns then arrangeColumns() end
- for i,card in ipairs(statCards) do
-  card.Position=UDim2.new((i-1)/3,(i-1)*8/3,0,0) card.Size=UDim2.new(1/3,-16/3,1,0)
-  for _,child in ipairs(card:GetChildren()) do
-   if child:IsA("TextLabel") then child.Position=UDim2.fromOffset(narrow and 8 or 42,child.Position.Y.Offset) child.Size=UDim2.new(1,narrow and -16 or -48,0,child.Size.Y.Offset) end
-   if child.Name:sub(1,5)=="Icon_" then child.Visible=not narrow end
+  if name == "Dashboard" then
+   subtitle.Text = "Design preview / no gameplay actions"
+  elseif name == "Settings" then
+   subtitle.Text = "Typography and control layout preview • No gameplay actions"
+  else
+   subtitle.Text = name .. " layout preview • No gameplay actions"
   end
- end
- notice.Size=UDim2.fromOffset(math.min(260,w-24),70)
- notice.Position=UDim2.new(1,-12,0,58) notice.AnchorPoint=Vector2.new(1,0)
- if minimized then notice.Visible=false end
- title.TextSize=w<400 and 18 or 22
- local sz=shell.AbsoluteSize
- local px,py=shell.Position.X,shell.Position.Y
- local cx=px.Scale*vp.X+px.Offset local cy=py.Scale*vp.Y+py.Offset
- -- Keep the dragged position during layout changes, bounded to the screen.
- shell.Position=UDim2.fromOffset(math.clamp(cx,w/2,math.max(w/2,vp.X-w/2)),math.clamp(cy,(minimized and 48 or h)/2,math.max((minimized and 48 or h)/2,vp.Y-(minimized and 48 or h)/2)))
+  for n, other in pairs(navButtons) do
+   local active = n == name
+   other.BackgroundColor3 = active and C.blue or C.side
+   navMarkers[n].Visible = active
+   navLabels[n].TextColor3 = active and C.text or C.muted
+   for _, child in ipairs(navIcons[n]:GetDescendants()) do
+    if child:IsA("Frame") and child.BackgroundTransparency < 1 then
+     child.BackgroundColor3 = active and C.text or C.muted
+    elseif child:IsA("UIStroke") then
+     child.Color = active and C.text or C.muted
+    end
+   end
+  end
+  body.CanvasPosition = Vector2.new(0,0)
+ end)
+ b.BackgroundColor3 = name == "Dashboard" and C.blue or C.side
+ caption.TextColor3 = name == "Dashboard" and C.text or C.muted
 end
-arrangeColumns=function()
- local stacked=shell.Size.X.Offset<700
- local ch=math.max(244,controls.AbsoluteSize.Y)
- local dashboard=selected=="Dashboard"
- controls.Size=UDim2.new((stacked or not dashboard) and 1 or .59,(stacked or not dashboard) and 0 or -5,0,244)
- controls.Position=UDim2.fromOffset(0,0)
- if selected=="About" then
-  updates.Position=UDim2.fromOffset(0,0) updates.Size=UDim2.new(1,0,0,224)
-  columns.Size=UDim2.new(1,0,0,224)
+
+local minimized = false
+local HEADER_H = 56
+local function layout()
+ local vp = gui.AbsoluteSize
+ if vp.X < 1 or vp.Y < 1 then vp = workspace.CurrentCamera.ViewportSize end
+ local w = math.min(940, math.floor(vp.X * .88))
+ if vp.X < 620 then w = math.max(1, vp.X - 20) end
+ local h = math.min(650, math.floor(vp.Y * .88))
+ if vp.Y < 540 then h = math.max(1, vp.Y - 20) end
+ local narrow = w < 650
+ local compactNav = w < 760
+ local sideWidth = compactNav and 58 or 170
+ local shownH = minimized and HEADER_H or h
+ shell.Size = UDim2.fromOffset(w, shownH)
+ sidebar.Visible = not minimized
+ body.Visible = not minimized
+ sidebar.Position = UDim2.fromOffset(0,HEADER_H)
+ sidebar.Size = UDim2.new(0,sideWidth,1,-HEADER_H)
+ nav.Size = UDim2.new(1,0,1, compactNav and -16 or -108)
+ navLayout.FillDirection = Enum.FillDirection.Vertical
+ navLayout.Padding = UDim.new(0,6)
+ foot.Visible = not compactNav
+ sidebarCard.Visible = not compactNav
+ for name,b in pairs(navButtons) do
+  b.Size = UDim2.new(1,0,0,42)
+  navLabels[name].Visible = not compactNav
+  navIcons[name].Position = UDim2.fromOffset(compactNav and 10 or 11,11)
+ end
+ body.Position = UDim2.fromOffset(sideWidth,HEADER_H)
+ body.Size = UDim2.new(1,-sideWidth,1,-HEADER_H)
+ previewPill.Visible = w >= 560
+ if arrangeColumns then arrangeColumns() end
+ for _, card in ipairs(statCards) do
+  local tile = card:FindFirstChildWhichIsA("Frame")
+  for _, child in ipairs(card:GetChildren()) do
+   if child:IsA("TextLabel") then
+    child.Position = UDim2.fromOffset(narrow and 12 or 60, child.Position.Y.Offset)
+    child.Size = UDim2.new(1, narrow and -24 or -68, 0, child.Size.Y.Offset)
+   end
+  end
+  if tile then tile.Visible = not narrow end
+ end
+ notice.Size = UDim2.fromOffset(math.min(286,w-24),72)
+ notice.Position = UDim2.new(1,-12,0,HEADER_H+10)
+ notice.AnchorPoint = Vector2.new(1,0)
+ if minimized then notice.Visible = false end
+ title.TextSize = w < 420 and 18 or 21
+ local px, py = shell.Position.X, shell.Position.Y
+ local cx = px.Scale * vp.X + px.Offset
+ local cy = py.Scale * vp.Y + py.Offset
+ shell.Position = UDim2.fromOffset(
+  math.clamp(cx, w/2, math.max(w/2, vp.X-w/2)),
+  math.clamp(cy, shownH/2, math.max(shownH/2, vp.Y-shownH/2))
+ )
+end
+
+arrangeColumns = function()
+ local stacked = shell.Size.X.Offset < 760
+ local ch = math.max(280, controls.AbsoluteSize.Y)
+ local dashboard = selected == "Dashboard"
+ if selected == "About" then
+  updates.Position = UDim2.fromOffset(0,0)
+  updates.Size = UDim2.new(1,0,0,270)
+  columns.Size = UDim2.new(1,0,0,270)
  elseif dashboard then
-  updates.Position=stacked and UDim2.fromOffset(0,ch+10) or UDim2.new(.59,5,0,0)
-  updates.Size=UDim2.new(stacked and 1 or .41,stacked and 0 or -5,0,244)
-  columns.Size=UDim2.new(1,0,0,stacked and ch+254 or math.max(ch,244))
+  controls.Size = UDim2.new(stacked and 1 or .60, stacked and 0 or -6, 0, 0)
+  controls.Position = UDim2.fromOffset(0,0)
+  updates.Position = stacked and UDim2.fromOffset(0,ch+10) or UDim2.new(.60,6,0,0)
+  updates.Size = UDim2.new(stacked and 1 or .40, stacked and 0 or -6, 0, math.max(ch,284))
+  columns.Size = UDim2.new(1,0,0, stacked and ch + math.max(ch,284) + 10 or math.max(ch,284))
  else
-  columns.Size=UDim2.new(1,0,0,ch)
+  controls.Size = UDim2.new(1,0,0,0)
+  controls.Position = UDim2.fromOffset(0,0)
+  columns.Size = UDim2.new(1,0,0,ch)
  end
 end
-on(controls:GetPropertyChangedSignal("AbsoluteSize"),arrangeColumns)
-on(gui:GetPropertyChangedSignal("AbsoluteSize"),layout)
-on(mini.Activated,function()
- local oldHeight=shell.Size.Y.Offset
- minimized=not minimized layout()
- local newHeight=shell.Size.Y.Offset
- local vp=gui.AbsoluteSize
- local center=shell.Position.Y.Offset+(newHeight-oldHeight)/2
- shell.Position=UDim2.fromOffset(shell.Position.X.Offset,math.clamp(center,newHeight/2,math.max(newHeight/2,vp.Y-newHeight/2)))
+
+on(controls:GetPropertyChangedSignal("AbsoluteSize"), arrangeColumns)
+on(gui:GetPropertyChangedSignal("AbsoluteSize"), layout)
+on(body:GetPropertyChangedSignal("CanvasPosition"), function()
+ if choices.Visible and selected ~= "Dashboard" and selected ~= "Automation" and selected ~= "Settings" then
+  choices.Visible = false
+  dropArrow.Rotation = 0
+ end
 end)
--- Drag only from the title area, with mouse/touch tracking and viewport bounds.
-local dragInput,dragStart,windowStart
+
+on(mini.Activated,function()
+ local oldHeight = shell.Size.Y.Offset
+ minimized = not minimized
+ layout()
+ local newHeight = shell.Size.Y.Offset
+ local vp = gui.AbsoluteSize
+ local center = shell.Position.Y.Offset + (newHeight-oldHeight)/2
+ shell.Position = UDim2.fromOffset(
+  shell.Position.X.Offset,
+  math.clamp(center,newHeight/2,math.max(newHeight/2,vp.Y-newHeight/2))
+ )
+end)
+
+-- Drag only from the title/header area and preserve viewport bounds.
+local dragInput, dragStart, windowStart
 local function startDrag(input)
- if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then
-  dragInput=input dragStart=input.Position windowStart=shell.AbsolutePosition
+ if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+  dragInput = input
+  dragStart = input.Position
+  windowStart = shell.AbsolutePosition
  end
 end
-header.Active=true title.Active=true
-on(header.InputBegan,startDrag) on(title.InputBegan,startDrag)
+header.Active = true
+title.Active = true
+on(header.InputBegan,startDrag)
+on(title.InputBegan,startDrag)
 on(UIS.InputChanged,function(input)
  if not dragInput then return end
- if input~=dragInput and not (dragInput.UserInputType==Enum.UserInputType.MouseButton1 and input.UserInputType==Enum.UserInputType.MouseMovement) then return end
- local dx,dy=input.Position.X-dragStart.X,input.Position.Y-dragStart.Y
- local sz=shell.AbsoluteSize local vp=gui.AbsoluteSize
- local x=math.clamp(windowStart.X+dx,0,math.max(0,vp.X-sz.X))
- local y=math.clamp(windowStart.Y+dy,0,math.max(0,vp.Y-sz.Y))
- shell.Position=UDim2.fromOffset(x+sz.X/2,y+sz.Y/2)
+ if input ~= dragInput and not (dragInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement) then return end
+ local dx,dy = input.Position.X-dragStart.X,input.Position.Y-dragStart.Y
+ local sz = shell.AbsoluteSize
+ local vp = gui.AbsoluteSize
+ local x = math.clamp(windowStart.X+dx,0,math.max(0,vp.X-sz.X))
+ local y = math.clamp(windowStart.Y+dy,0,math.max(0,vp.Y-sz.Y))
+ shell.Position = UDim2.fromOffset(x+sz.X/2,y+sz.Y/2)
 end)
-on(UIS.InputEnded,function(input) if input==dragInput then dragInput=nil end end)
-local cameraConnection=nil
+on(UIS.InputEnded,function(input)
+ if input == dragInput then dragInput = nil end
+end)
+
+local cameraConnection = nil
 local function watchCamera()
  if cameraConnection then cameraConnection:Disconnect() end
- if workspace.CurrentCamera then cameraConnection=on(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"),layout) end
+ if workspace.CurrentCamera then
+  cameraConnection = on(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"),layout)
+ end
  layout()
 end
 on(workspace:GetPropertyChangedSignal("CurrentCamera"),watchCamera)
-local fontNodes={}
-for _,node in ipairs(gui:GetDescendants()) do
+
+-- Apply one native Roblox FontFace family while preserving weight hierarchy.
+local fontNodes = {}
+for _, node in ipairs(gui:GetDescendants()) do
  if node:IsA("TextLabel") or node:IsA("TextButton") then
-  local weight=Enum.FontWeight.Regular
-  if node.Font==Enum.Font.GothamBold then weight=Enum.FontWeight.Bold
-  elseif node.Font==Enum.Font.GothamMedium or node.ClassName=="TextButton" then weight=Enum.FontWeight.Medium end
-  fontNodes[#fontNodes+1]={node=node,weight=weight}
+  local weight = Enum.FontWeight.Regular
+  if node.Font == Enum.Font.GothamBold then
+   weight = Enum.FontWeight.Bold
+  elseif node.Font == Enum.Font.GothamMedium or node.ClassName == "TextButton" then
+   weight = Enum.FontWeight.Medium
+  end
+  fontNodes[#fontNodes+1] = {node=node,weight=weight}
  end
-end
-local function chooseFont(index)
- local option=fontOptions[index]
- local failed=false
- local faces={}
- for _,entry in ipairs(fontNodes) do
-  local ok=pcall(function()
-   if not faces[entry.weight] then faces[entry.weight]=Font.new("rbxasset://fonts/families/"..option.family..".json",entry.weight,Enum.FontStyle.Normal) end
-   entry.node.FontFace=faces[entry.weight]
-  end)
-  if not ok then failed=true end
- end
- fontStatus.Text=failed and "Font unavailable on this client" or ("Selected font: "..option.name)
- for i,b in ipairs(fontButtons) do b.BackgroundColor3=i==index and C.blue or C.side end
 end
 
-for i,b in ipairs(fontButtons) do on(b.Activated,function() chooseFont(i) end) end
+local function chooseFont(index)
+ local option = fontOptions[index]
+ local failed = false
+ local faces = {}
+ for _, entry in ipairs(fontNodes) do
+  local ok = pcall(function()
+   if not faces[entry.weight] then
+    faces[entry.weight] = Font.new(
+     "rbxasset://fonts/families/" .. option.family .. ".json",
+     entry.weight,
+     Enum.FontStyle.Normal
+    )
+   end
+   entry.node.FontFace = faces[entry.weight]
+  end)
+  if not ok then failed = true end
+ end
+ fontStatus.Text = failed and "Font unavailable on this client" or ("Selected font: " .. option.name)
+ for i,b in ipairs(fontButtons) do
+  b.BackgroundColor3 = i == index and C.blue or C.side
+ end
+end
+for i,b in ipairs(fontButtons) do
+ on(b.Activated,function() chooseFont(i) end)
+end
+
 chooseFont(3)
 watchCamera()
-return {Destroy=cleanup}
+arrangeColumns()
 
+return {Destroy=cleanup}
