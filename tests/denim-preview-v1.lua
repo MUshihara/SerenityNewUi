@@ -32,7 +32,7 @@ local C = {
  bg=Color3.fromRGB(13,32,48), panel=Color3.fromRGB(19,43,62),
  side=Color3.fromRGB(11,28,42), line=Color3.fromRGB(43,76,101),
  blue=Color3.fromRGB(42,89,124), bright=Color3.fromRGB(81,151,220),
- text=Color3.fromRGB(243,237,222), muted=Color3.fromRGB(166,190,210),
+ text=Color3.fromRGB(243,237,222), muted=Color3.fromRGB(181,201,219),
  green=Color3.fromRGB(96,212,174)
 }
 local function make(class, parent, props)
@@ -126,7 +126,7 @@ local sidebar=make("Frame",shell,{BackgroundColor3=C.side,BorderSizePixel=0})
 local nav=make("Frame",sidebar,{BackgroundTransparency=1,Size=UDim2.new(1,0,1,-48)})
 pad(nav,8)
 local navLayout=list(nav,7)
-local foot=text(sidebar,"Preview v2",12,C.green)
+local foot=text(sidebar,"Font test v3",12,C.green)
 foot.Position=UDim2.new(0,12,1,-40)
 foot.Size=UDim2.new(1,-24,0,32)
 local body=make("ScrollingFrame",shell,{BackgroundTransparency=1,BorderSizePixel=0,
@@ -135,7 +135,7 @@ local body=make("ScrollingFrame",shell,{BackgroundTransparency=1,BorderSizePixel
 pad(body,12)
 list(body,8)
 local pageHead=make("Frame",body,{BackgroundTransparency=1,Size=UDim2.new(1,0,0,46),LayoutOrder=1})
-local heading=text(pageHead,"Dashboard",21)
+local heading=text(pageHead,"Dashboard",23)
 heading.Font=Enum.Font.GothamBold
 heading.Size=UDim2.new(1,0,0,30)
 heading.LayoutOrder=1
@@ -149,10 +149,10 @@ for i,info in ipairs({{"Session","Preview"},{"Active now","—"},{"Status","UI o
  card.Size=UDim2.new(1/3,-6,1,0)
  card.Position=UDim2.new((i-1)/3, (i-1)*3,0,0)
  icon(card,i==1 and "clock" or i==2 and "user" or "Automation",10,21,22,i==3 and C.green or C.muted)
- local label=text(card,info[1],11,C.muted)
+ local label=text(card,info[1],12,C.muted)
  label.Position=UDim2.fromOffset(42,8)
  label.Size=UDim2.new(1,-48,0,20)
- local value=text(card,info[2],16,i==3 and C.green or C.text)
+ local value=text(card,info[2],20,i==3 and C.green or C.text)
  value.Position=UDim2.fromOffset(42,29)
  value.Size=UDim2.new(1,-48,0,24)
  value.Font=Enum.Font.GothamBold
@@ -254,15 +254,15 @@ local updateRows={}
 for i,info in ipairs({{"New blue theme","Calmer colors, finer borders."},{"Compact navigation","More room for your controls."},{"Mobile layout","Cards stack without tiny text."}}) do
  local item=make("Frame",updates,{BackgroundTransparency=1,Position=UDim2.fromOffset(0,32+(i-1)*58),Size=UDim2.new(1,0,0,58)})
  icon(item,"doc",0,8,20)
- local a=text(item,info[1],12) a.Font=Enum.Font.GothamMedium a.Position=UDim2.fromOffset(30,0) a.Size=UDim2.new(1,-30,0,24)
- local b=text(item,info[2],11,C.muted) b.Position=UDim2.fromOffset(30,24) b.Size=UDim2.new(1,-30,0,30)
+ local a=text(item,info[1],14) a.Font=Enum.Font.GothamMedium a.Position=UDim2.fromOffset(30,0) a.Size=UDim2.new(1,-30,0,24)
+ local b=text(item,info[2],13,C.muted) b.Position=UDim2.fromOffset(30,24) b.Size=UDim2.new(1,-30,0,30)
  updateRows[i]=item
 end
 local community=frame(body)
 community.LayoutOrder=6 community.Size=UDim2.new(1,0,0,54)
 icon(community,"user",12,15,22)
-local communityTitle=text(community,"Community",13) communityTitle.Position=UDim2.fromOffset(44,5) communityTitle.Size=UDim2.new(1,-174,0,22)
-local communitySub=text(community,"News and updates",11,C.muted) communitySub.Position=UDim2.fromOffset(44,26) communitySub.Size=UDim2.new(1,-174,0,20)
+local communityTitle=text(community,"Community",14) communityTitle.Position=UDim2.fromOffset(44,5) communityTitle.Size=UDim2.new(1,-174,0,22)
+local communitySub=text(community,"News and updates",13,C.muted) communitySub.Position=UDim2.fromOffset(44,26) communitySub.Size=UDim2.new(1,-174,0,20)
 local notice=frame(shell,C.panel)
 notice.Visible=false
 notice.ZIndex=10
@@ -285,15 +285,40 @@ test.LayoutOrder=7
 test.Size=UDim2.fromOffset(102,32)
 test.Position=UDim2.new(1,-112,0,11)
 on(test.Activated,function() notice.Visible=not notice.Visible end)
+local inventoryInfo=frame(body)
+inventoryInfo.LayoutOrder=5 inventoryInfo.Size=UDim2.new(1,0,0,116) inventoryInfo.Visible=false
+pad(inventoryInfo,16)
+local inventoryTitle=text(inventoryInfo,"Inventory preview",18) inventoryTitle.Font=Enum.Font.GothamBold
+local inventoryDesc=text(inventoryInfo,"This isolated UI test does not read or modify your items. Use Dashboard to compare the same controls in each font.",14,C.muted)
+inventoryDesc.Position=UDim2.fromOffset(0,32) inventoryDesc.Size=UDim2.new(1,0,0,64)
+local fontBar=frame(body)
+fontBar.Name="FontComparison" fontBar.LayoutOrder=2 fontBar.Size=UDim2.new(1,0,0,72)
+local fontStatus=text(fontBar,"Compare fonts: A / Builder Sans",12,C.muted)
+fontStatus.Position=UDim2.fromOffset(10,5) fontStatus.Size=UDim2.new(1,-20,0,20)
+local fontOptions={
+ {label="A: Builder",name="Builder Sans",family="BuilderSans"},
+ {label="B: Source",name="Source Sans Pro",family="SourceSansPro"},
+ {label="C: Roboto",name="Roboto",family="Roboto"}
+}
+local fontButtons={}
+for i,option in ipairs(fontOptions) do
+ local b=button(fontBar,option.label)
+ b.Position=UDim2.new((i-1)/3,6,0,30) b.Size=UDim2.new(1/3,-12,0,34)
+ fontButtons[i]=b
+end
 local navButtons={}
 local navIcons={}
 local selected="Dashboard"
+local arrangeColumns
+local navLabels={}
 for _,name in ipairs({"About","Dashboard","Automation","Inventory","Settings"}) do
  local b=button(nav,name)
  b.TextXAlignment=Enum.TextXAlignment.Left
- pad(b,10)
- navIcons[name]=icon(b,name,0,10,18)
- b.Text="       "..name
+ navIcons[name]=icon(b,name,10,10,18)
+ b.Text=""
+ local caption=text(b,name,14)
+ caption.Position=UDim2.fromOffset(38,0) caption.Size=UDim2.new(1,-44,1,0)
+ navLabels[name]=caption
  navButtons[name]=b
  on(b.Activated,function()
   selected=name
@@ -304,7 +329,9 @@ for _,name in ipairs({"About","Dashboard","Automation","Inventory","Settings"}) 
   controls.Visible=name~="About"
   updates.Visible=name=="Dashboard" or name=="About"
   community.Visible=name=="Dashboard" or name=="About"
+  inventoryInfo.Visible=name=="Inventory"
   heading.Text=name
+  if arrangeColumns then arrangeColumns() end
   subtitle.Text=name=="Dashboard" and "Design preview / no gameplay actions" or name.." layout preview • No gameplay actions"
   for n,other in pairs(navButtons) do other.BackgroundColor3=n==name and C.blue or C.side end
   body.CanvasPosition=Vector2.new(0,0)
@@ -328,16 +355,12 @@ local function layout()
  navLayout.FillDirection=Enum.FillDirection.Vertical navLayout.Padding=UDim.new(0,5)
  foot.Visible=not compactNav
  for name,b in pairs(navButtons) do
-  b.Size=UDim2.new(1,0,0,38) b.TextSize=12 b.Text=compactNav and "" or "       "..name
-  navIcons[name].Position=UDim2.fromOffset(compactNav and -1 or 0,10)
+  b.Size=UDim2.new(1,0,0,38) b.Text=""
+  navLabels[name].Visible=not compactNav
+  navIcons[name].Position=UDim2.fromOffset(compactNav and 9 or 10,10)
  end
  body.Position=UDim2.fromOffset(sideWidth,48) body.Size=UDim2.new(1,-sideWidth,1,-48)
- controls.Size=UDim2.new(narrow and 1 or .59,narrow and 0 or -5,0,0)
- controls.Position=UDim2.fromOffset(0,0)
- local ch=math.max(220,controls.AbsoluteSize.Y)
- updates.Position=narrow and UDim2.fromOffset(0,ch+10) or UDim2.new(.59,5,0,0)
- updates.Size=UDim2.new(narrow and 1 or .41,narrow and 0 or -5,0,narrow and 234 or math.max(220,ch))
- columns.Size=UDim2.new(1,0,0,narrow and ch+244 or math.max(220,ch))
+ if arrangeColumns then arrangeColumns() end
  for i,card in ipairs(statCards) do
   card.Position=UDim2.new((i-1)/3,2,0,0) card.Size=UDim2.new(1/3,-6,1,0)
   for _,child in ipairs(card:GetChildren()) do
@@ -348,16 +371,27 @@ local function layout()
  notice.Size=UDim2.fromOffset(math.min(260,w-24),70)
  notice.Position=UDim2.new(1,-12,0,58) notice.AnchorPoint=Vector2.new(1,0)
  if minimized then notice.Visible=false end
- title.TextSize=w<400 and 13 or 16
+ title.TextSize=w<400 and 16 or 19
  shell.Position=UDim2.fromScale(.5,.5)
 end
-on(controls:GetPropertyChangedSignal("AbsoluteSize"),function()
- local width=columns.AbsoluteSize.X
- local ch=math.max(220,controls.AbsoluteSize.Y)
- local stacked=controls.Size.X.Scale==1
- updates.Position=stacked and UDim2.fromOffset(0,ch+10) or UDim2.new(.59,5,0,0)
- columns.Size=UDim2.new(1,0,0,stacked and ch+244 or ch)
-end)
+arrangeColumns=function()
+ local stacked=shell.Size.X.Offset<700
+ local ch=math.max(232,controls.AbsoluteSize.Y)
+ local dashboard=selected=="Dashboard"
+ controls.Size=UDim2.new((stacked or not dashboard) and 1 or .59,(stacked or not dashboard) and 0 or -5,0,0)
+ controls.Position=UDim2.fromOffset(0,0)
+ if selected=="About" then
+  updates.Position=UDim2.fromOffset(0,0) updates.Size=UDim2.new(1,0,0,244)
+  columns.Size=UDim2.new(1,0,0,244)
+ elseif dashboard then
+  updates.Position=stacked and UDim2.fromOffset(0,ch+10) or UDim2.new(.59,5,0,0)
+  updates.Size=UDim2.new(stacked and 1 or .41,stacked and 0 or -5,0,244)
+  columns.Size=UDim2.new(1,0,0,stacked and ch+254 or math.max(ch,244))
+ else
+  columns.Size=UDim2.new(1,0,0,ch)
+ end
+end
+on(controls:GetPropertyChangedSignal("AbsoluteSize"),arrangeColumns)
 on(gui:GetPropertyChangedSignal("AbsoluteSize"),layout)
 on(mini.Activated,function() minimized=not minimized layout() end)
 -- Drag only from the title area, with mouse/touch tracking and viewport bounds.
@@ -386,6 +420,30 @@ local function watchCamera()
  layout()
 end
 on(workspace:GetPropertyChangedSignal("CurrentCamera"),watchCamera)
+local fontNodes={}
+for _,node in ipairs(gui:GetDescendants()) do
+ if node:IsA("TextLabel") or node:IsA("TextButton") then
+  local weight=Enum.FontWeight.Regular
+  if node.Font==Enum.Font.GothamBold then weight=Enum.FontWeight.Bold
+  elseif node.Font==Enum.Font.GothamMedium or node.ClassName=="TextButton" then weight=Enum.FontWeight.Medium end
+  if node~=title then fontNodes[#fontNodes+1]={node=node,weight=weight} end
+ end
+end
+local function chooseFont(index)
+ local option=fontOptions[index]
+ local failed=false
+ for _,entry in ipairs(fontNodes) do
+  local ok=pcall(function()
+   entry.node.FontFace=Font.new("rbxasset://fonts/families/"..option.family..".json",entry.weight,Enum.FontStyle.Normal)
+  end)
+  if not ok then failed=true end
+ end
+ fontStatus.Text=failed and "Font unavailable on this client" or ("Selected: "..string.char(64+index).." / "..option.name)
+ for i,b in ipairs(fontButtons) do b.BackgroundColor3=i==index and C.blue or C.side end
+end
+pcall(function() title.FontFace=Font.new("rbxasset://fonts/families/AccanthisADFStd.json",Enum.FontWeight.Regular,Enum.FontStyle.Normal) end)
+for i,b in ipairs(fontButtons) do on(b.Activated,function() chooseFont(i) end) end
+chooseFont(1)
 watchCamera()
 return {Destroy=cleanup}
 
