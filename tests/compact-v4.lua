@@ -469,6 +469,41 @@ function Material.Hover(frame, tokens, active)
 end
 
 -- Four tapered rays drawn from Frames; independent of font glyph coverage.
+-- Small vector emblems; no font glyphs or external image downloads.
+function Material.Emblem(parent,position,size,color,kind)
+    local root=Instance.new("Frame")
+    root.Name="SerenityEmblem";root.BackgroundTransparency=1
+    root.Position=position;root.Size=UDim2.fromOffset(size,size);root.Parent=parent
+    local function line(x1,y1,x2,y2,width)
+        local dx,dy=x2-x1,y2-y1
+        local f=Instance.new("Frame");f.BorderSizePixel=0;f.BackgroundColor3=color
+        f.AnchorPoint=Vector2.new(0.5,0.5);f.Position=UDim2.fromOffset((x1+x2)*size/2,(y1+y2)*size/2)
+        f.Size=UDim2.fromOffset(math.sqrt(dx*dx+dy*dy)*size,width or 1.5)
+        f.Rotation=math.deg(math.atan2(dy,dx));f.ZIndex=2;f.Parent=root
+        local c=Instance.new("UICorner");c.CornerRadius=UDim.new(1,0);c.Parent=f
+    end
+    if kind=="compass" then
+        -- Open orbital arc around an asymmetric navigation needle.
+        for i=0,13 do
+            local a=math.rad(35+i*21);local b=math.rad(35+(i+1)*21)
+            line(0.5+0.43*math.cos(a),0.5+0.43*math.sin(a),0.5+0.43*math.cos(b),0.5+0.43*math.sin(b),1.2)
+        end
+        line(0.68,0.23,0.57,0.58,1.8);line(0.57,0.58,0.29,0.74,1.8)
+        line(0.29,0.74,0.41,0.39,1.8);line(0.41,0.39,0.68,0.23,1.8)
+        line(0.41,0.39,0.57,0.58,1.2)
+    else
+        -- Two interlocking open loops: connection and community.
+        for _,offset in ipairs({0,0.3}) do
+            for i=0,11 do
+                local a=math.rad(-50+i*25);local b=math.rad(-50+(i+1)*25)
+                line(0.34+offset+0.25*math.cos(a),0.39+offset*0.5+0.25*math.sin(a),0.34+offset+0.25*math.cos(b),0.39+offset*0.5+0.25*math.sin(b),1.6)
+            end
+        end
+        line(0.38,0.62,0.65,0.34,1.8)
+    end
+    return root
+end
+
 function Material.Star(parent, position, size, color, z)
     local root=Instance.new("Frame")
     root.Name="SerenityStar"
@@ -2494,7 +2529,7 @@ do
         label(tile,entry[2],10,26,-20,25,16,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
     local welcome = card(dashboard,66,Color3.fromRGB(36,83,119))
-    Material.Star(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),2)
+    Material.Emblem(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),"compass")
     label(welcome,"Welcome back",57,9,-70,25,18)
     label(welcome,"Choose a category to get started.",57,36,-70,20,12,Tokens.Color.TextMuted)
     local cols = ColumnLayout.new(dashboard,deps,{LayoutOrder=4,Gap=10})
@@ -2514,7 +2549,7 @@ do
     end
     local community=card(dashboard,60)
     community.LayoutOrder=5
-    Material.Star(community,UDim2.fromOffset(14,17),25,Tokens.Color.TextMuted,2)
+    Material.Emblem(community,UDim2.fromOffset(14,17),25,Tokens.Color.TextMuted,"connection")
     label(community,"Serenity community",49,8,-170,23,14)
     label(community,"News, releases and updates.",49,33,-170,18,11,Tokens.Color.TextMuted)
     local button=Instance.new("TextButton")
@@ -2629,7 +2664,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.9 GLASS NAVIGATION | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.10 DISTINCT EMBLEMS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
