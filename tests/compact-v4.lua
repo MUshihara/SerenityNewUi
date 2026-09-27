@@ -1564,20 +1564,23 @@ function Desktop.Mount(deps, options)
     uiScale.Scale = 1
     uiScale.Parent = holder
 
-    local refreshLayout
-    local mobileLayout=UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
     local function refreshScale()
         local camera = workspace.CurrentCamera
         local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
         local inset = GuiService:GetGuiInset()
-        uiScale.Scale = 1
-        local availableH=math.max(200,viewport.Y-inset.Y-24)
-        if mobileLayout then
-            holder.Size=UDim2.fromOffset(math.min(680,math.max(300,viewport.X*0.82)),math.min(430,math.max(200,availableH*0.82)))
+        local touchLayout=UserInputService.TouchEnabled and (not UserInputService.KeyboardEnabled or viewport.Y<600)
+        if touchLayout then
+            -- Keep a complete logical canvas, then fit all of it into the phone.
+            -- Shrinking only the frame left desktop-size controls in a short viewport.
+            local availableW=math.max(1,viewport.X-32)
+            local availableH=math.max(1,viewport.Y-inset.Y-32)
+            local scale=math.min(1,availableW*0.9/tokens.Size.Window.X,availableH*0.86/tokens.Size.Window.Y)
+            holder.Size=UDim2.fromOffset(tokens.Size.Window.X,tokens.Size.Window.Y)
+            uiScale.Scale=scale
         else
+            uiScale.Scale = 1
             holder.Size = UDim2.fromOffset(math.min(tokens.Size.Window.X, math.max(320, viewport.X - 24)), math.min(tokens.Size.Window.Y, math.max(240, viewport.Y - inset.Y - 24)))
         end
-        if refreshLayout then refreshLayout() end
         holder.Position = UDim2.fromScale(0.5, 0.5)
         deps.PopupManager:Close()
     end
@@ -1885,10 +1888,8 @@ function Desktop.Mount(deps, options)
         })
 
         local entry = {Id = id, Page = page, NavItem = navItem, Accent = accent, Title = props.Title or id}
-        if mobileLayout then navItem:SetCollapsed(true) end
         pages[id] = entry
         table.insert(navItems, entry)
-        if refreshLayout then refreshLayout() end
 
         if not currentPage then app:SelectPage(id) end
         return page
@@ -2165,29 +2166,6 @@ function Desktop.Mount(deps, options)
         end
     end)
 
-    refreshLayout=function()
-        if not mobileLayout then return end
-        sidebar.Size=UDim2.new(0,62,1,-tokens.Size.Topbar)
-        content.Position=UDim2.fromOffset(72,tokens.Size.Topbar+8)
-        content.Size=UDim2.new(1,-82,1,-(tokens.Size.Topbar+18))
-        navHolder.Position=UDim2.fromOffset(7,8)
-        navHolder.Size=UDim2.new(1,-14,1,-70)
-        userFrame.Position=UDim2.new(0,7,1,-8)
-        userFrame.Size=UDim2.new(1,-14,0,46)
-        avatar.Position=UDim2.fromOffset(7,6)
-        for _,child in ipairs(userFrame:GetChildren()) do
-            if child:IsA("TextLabel") then child.Visible=false end
-        end
-        userChevron.Visible=false
-        heading.TextSize=15
-        heading.Size=UDim2.fromOffset(166,tokens.Size.Topbar)
-        pageButton.Visible=false
-        for _,entry in pairs(pages) do entry.NavItem:SetCollapsed(true) end
-        for _,child in ipairs(navHolder:GetChildren()) do
-            if child:IsA("TextLabel") then child.Visible=false end
-        end
-    end
-    refreshLayout()
     return app
 end
 
@@ -2766,7 +2744,7 @@ app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
 if savedAppearance then app:RestoreViewState(savedAppearance.View) end
 app.OnViewChanged=saveAppearance
-print("SERENITY M4.16 MOBILE COMPACT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.17 MOBILE FIT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
