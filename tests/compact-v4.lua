@@ -143,7 +143,7 @@ Tokens.Color = {
 
     Text = Color3.fromRGB(247, 244, 235),
     TextMuted = Color3.fromRGB(171, 177, 191),
-    TextDim = Color3.fromRGB(137, 148, 168),
+    TextDim = Color3.fromRGB(161, 173, 192),
 
     Divider = Color3.fromRGB(38, 41, 54),
     Stroke = Color3.fromRGB(88, 150, 197),
@@ -721,7 +721,7 @@ function NavItem:SetSelected(selected)
     self.Selected = not not selected
     local tokens = self.Deps.Tokens
     self.Deps.Material.NavRow(self.Row, tokens, self.Selected)
-    self.Icon.ImageColor3 = self.Selected and self.Accent or tokens.Color.TextMuted
+    self.Icon.ImageColor3 = self.Selected and tokens.Color.Accent or tokens.Color.TextMuted
     self.Label.TextColor3 = self.Selected and tokens.Color.Text or tokens.Color.TextMuted
 end
 
@@ -2233,9 +2233,12 @@ local settingsCols = ColumnLayout.new(settings, deps, {})
 
 local themeBindings=setmetatable({}, {__mode="k"})
 local refreshMaterials
+local saveAppearance=function() end
+local selectedTheme="Ocean"
 local originalColors={}
 for key,color in pairs(Tokens.Color) do originalColors[key]=color end
 local function applyTheme(name)
+    selectedTheme=name
     local hue=({Ocean=0.57,Lavender=0.72,Rose=0.94,Emerald=0.43,Slate=0.60})[name] or 0.57
     for key,original in pairs(originalColors) do
         local _,sat,val=original:ToHSV()
@@ -2267,10 +2270,29 @@ local function applyTheme(name)
         end
     end
     if refreshMaterials then refreshMaterials() end
+    saveAppearance()
 end
 
 -- Event-driven materials: no heartbeat, textures or animated full-screen layers.
-local materialState={Mode="Enhanced",Opacity=72,Edge=80,Palette="Aurora"}
+local materialState={Mode="Enhanced",Opacity=85,Edge=54,Palette="Aurora",Blur=3}
+local appearancePath="Serenity_UI_Test_Appearance_v1.json"
+local HttpService=game:GetService("HttpService")
+local saveRevision=0
+saveAppearance=function()
+    saveRevision=saveRevision+1
+    local revision=saveRevision
+    task.delay(0.7,function()
+        if revision~=saveRevision or type(writefile)~="function" then return end
+        pcall(function()
+            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur}))
+        end)
+    end)
+end
+local savedAppearance
+if type(readfile)=="function" then
+    local ok,data=pcall(function() return HttpService:JSONDecode(readfile(appearancePath)) end)
+    if ok and type(data)=="table" and data.Version==1 then savedAppearance=data end
+end
 local glassSelectors={}
 local edgePalettes={
     Aurora={Color3.fromRGB(107,224,255),Color3.fromRGB(174,153,255),Color3.fromRGB(255,206,163)},
@@ -2332,6 +2354,7 @@ function app:SetGlassQuality(value)
     if self.Acrylic then self.Acrylic:SetQuality(value) end
     for _,control in ipairs(glassSelectors) do control:Set(value,true) end
     refreshMaterials()
+    saveAppearance()
 end
 local function glassSelector(parent,title)
     local control=Select.new(parent,deps,{Title=title,Options={"Off","Basic","Enhanced"},Default=materialState.Mode,Callback=function(v) app:SetGlassQuality(v) end})
@@ -2339,12 +2362,39 @@ local function glassSelector(parent,title)
     return control
 end
 local appearance = Section.new(settingsCols.Left, deps, {Title="Appearance"})
-Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
+local themeControl=Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
 glassSelector(appearance.Body,"Glass material")
-Select.new(appearance.Body,deps,{Title="Border colors",Options={"Aurora","Ice","Sunset","Match theme"},Default="Aurora",Callback=function(v) materialState.Palette=v;refreshMaterials() end})
-Slider.new(appearance.Body,deps,{Title="Border intensity",Min=0,Max=100,Step=1,Default=80,Suffix="%",Callback=function(v) materialState.Edge=v;refreshMaterials() end})
-Slider.new(appearance.Body,deps,{Title="Material opacity",Min=50,Max=100,Step=1,Default=72,Suffix="%",Callback=function(v) materialState.Opacity=v;refreshMaterials() end})
-Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) if app.Acrylic then app.Acrylic:SetAmount(v) end end})
+local paletteControl=Select.new(appearance.Body,deps,{Title="Border colors",Options={"Aurora","Ice","Sunset","Match theme"},Default="Aurora",Callback=function(v) materialState.Palette=v;refreshMaterials();saveAppearance() end})
+local edgeControl=Slider.new(appearance.Body,deps,{Title="Border intensity",Min=0,Max=100,Step=1,Default=54,Suffix="%",Callback=function(v) materialState.Edge=v;refreshMaterials();saveAppearance() end})
+local opacityControl=Slider.new(appearance.Body,deps,{Title="Material opacity",Min=50,Max=100,Step=1,Default=85,Suffix="%",Callback=function(v) materialState.Opacity=v;refreshMaterials();saveAppearance() end})
+local blurControl=Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) materialState.Blur=v;if app.Acrylic then app.Acrylic:SetAmount(v) end;saveAppearance() end})
+local function restoreAppearance(data)
+    data=data or {}
+    local function choice(value,options,fallback)
+        for _,v in ipairs(options) do if value==v then return value end end
+        return fallback
+    end
+    local function number(value,low,high,fallback)
+        if type(value)~="number" or value~=value or math.abs(value)==math.huge then return fallback end
+        return math.clamp(value,low,high)
+    end
+    materialState.Mode=choice(data.Mode,{"Off","Basic","Enhanced"},"Enhanced")
+    materialState.Palette=choice(data.Palette,{"Aurora","Ice","Sunset","Match theme"},"Aurora")
+    materialState.Edge=number(data.Edge,0,100,54)
+    materialState.Opacity=number(data.Opacity,50,100,85)
+    materialState.Blur=number(data.Blur,0,8,3)
+    local theme=choice(data.Theme,{"Ocean","Lavender","Rose","Emerald","Slate"},"Ocean")
+    themeControl:Set(theme,true);paletteControl:Set(materialState.Palette,true)
+    edgeControl:Set(materialState.Edge,true);opacityControl:Set(materialState.Opacity,true);blurControl:Set(materialState.Blur,true)
+    applyTheme(theme)
+    if app.Acrylic then app.Acrylic:SetAmount(materialState.Blur) end
+    app:SetGlassQuality(materialState.Mode)
+end
+local reset=Instance.new("TextButton")
+reset.Size=UDim2.new(1,0,0,36);reset.Text="Restore preferred appearance"
+reset.Font=Enum.Font.GothamMedium;reset.TextSize=12;reset.TextColor3=Tokens.Color.Text
+reset.Parent=appearance.Body;Material.Inset(reset,Tokens)
+reset.Activated:Connect(function() restoreAppearance(nil) end)
 local controls = Section.new(settingsCols.Right, deps, {Title="Component Test"})
 Toggle.new(controls.Body, deps, {Title="Enabled Toggle", Default=true})
 Toggle.new(controls.Body, deps, {Title="Disabled Toggle", Default=false, Enabled=false})
@@ -2381,10 +2431,12 @@ do
     invite.Parent=title
     Material.Section(invite,Tokens)
     label(invite,"Discord",12,5,-24,20,14)
-    label(invite,"Copy invite · news & updates",12,27,-24,16,9,Tokens.Color.TextMuted)
+    local inviteHint=label(invite,"Copy invite · news & updates",12,27,-24,16,10,Tokens.Color.TextMuted)
     invite.Activated:Connect(function()
         local copy=setclipboard or toclipboard
-        if copy then pcall(copy,"https://discord.gg/pWPs7428wE") end
+        local ok=type(copy)=="function" and pcall(copy,"https://discord.gg/pWPs7428wE")
+        inviteHint.Text=ok and "Invite copied" or "Copy unavailable"
+        task.delay(2,function() if inviteHint.Parent then inviteHint.Text="Copy invite · news & updates" end end)
     end)
     local metrics = Instance.new("Frame")
     metrics.Size = UDim2.new(1,-4,0,58)
@@ -2532,8 +2584,8 @@ do
 end
 
 app:SelectPage("Dashboard")
-app:SetGlassQuality("Enhanced")
-print("SERENITY M4.7 IRIDESCENT MATERIALS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+restoreAppearance(savedAppearance)
+print("SERENITY M4.8 APPEARANCE POLISH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
