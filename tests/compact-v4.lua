@@ -2353,7 +2353,7 @@ local function applyTheme(name)
 end
 
 -- Event-driven materials: no heartbeat, textures or animated full-screen layers.
-local materialState={Mode="Enhanced",Opacity=85,Edge=54,Palette="Aurora",Blur=3}
+local materialState={Mode="Enhanced",Opacity=85,Edge=54,Palette="Aurora",Blur=3,Finish="Classic glass",BorderStyle="Full outline"}
 local appearancePath="Serenity_UI_Test_Appearance_v1.json"
 local HttpService=game:GetService("HttpService")
 local saveRevision=0
@@ -2363,7 +2363,7 @@ saveAppearance=function()
     task.delay(0.7,function()
         if revision~=saveRevision or type(writefile)~="function" then return end
         pcall(function()
-            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur}))
+            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur,Finish=materialState.Finish,BorderStyle=materialState.BorderStyle}))
         end)
     end)
 end
@@ -2404,7 +2404,7 @@ refreshMaterials=function()
                     ColorSequenceKeypoint.new(1,Color3.fromRGB(144,170,209))})
                 -- Each surface has a purpose; avoid repeating the hero reflection.
                 local style=object:GetAttribute("SurfaceStyle") or (role=="Section" and "quiet" or "shell")
-                if style~="hero" then
+                if style~="hero" and (materialState.Finish=="Soft glass" or style=="editorial") then
                     g.Rotation=style=="community" and 0 or 90
                     g.Color=off and ColorSequence.new(Color3.new(1,1,1)) or ColorSequence.new(Color3.fromRGB(245,248,255),Color3.fromRGB(204,216,231))
                 end
@@ -2436,6 +2436,11 @@ refreshMaterials=function()
             object.Thickness=outer and 1.7 or 1
             local surface=object.Parent:GetAttribute("SurfaceStyle")
             object.Transparency=surface=="editorial" and 1 or 1-(materialState.Edge/100)*(outer and 1 or surface=="metric" and 0.3 or 0.57)
+            if not outer and surface~="editorial" then
+                if materialState.BorderStyle=="Full outline" then object.Transparency=1-(materialState.Edge/100)*0.8
+                elseif materialState.BorderStyle=="Soft outline" then object.Transparency=1-(materialState.Edge/100)*0.35
+                else object.Transparency=1 end
+            end
             local g=object:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
             g.Parent=object;g.Color=spectrum;g.Rotation=35
             g.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.52,0.25),NumberSequenceKeypoint.new(1,0)})
@@ -2458,6 +2463,8 @@ local appearance = Section.new(settingsCols.Left, deps, {Title="Appearance"})
 local themeControl=Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
 glassSelector(appearance.Body,"Glass material")
 local paletteControl=Select.new(appearance.Body,deps,{Title="Border colors",Options={"Aurora","Ice","Sunset","Match theme"},Default="Aurora",Callback=function(v) materialState.Palette=v;refreshMaterials();saveAppearance() end})
+local finishControl=Select.new(appearance.Body,deps,{Title="Panel finish",Options={"Classic glass","Soft glass"},Default="Classic glass",Callback=function(v) materialState.Finish=v;refreshMaterials();saveAppearance() end})
+local borderStyleControl=Select.new(appearance.Body,deps,{Title="Card borders",Options={"Full outline","Soft outline","Window only"},Default="Full outline",Callback=function(v) materialState.BorderStyle=v;refreshMaterials();saveAppearance() end})
 local edgeControl=Slider.new(appearance.Body,deps,{Title="Border intensity",Min=0,Max=100,Step=1,Default=54,Suffix="%",Callback=function(v) materialState.Edge=v;refreshMaterials();saveAppearance() end})
 local opacityControl=Slider.new(appearance.Body,deps,{Title="Material opacity",Min=50,Max=100,Step=1,Default=85,Suffix="%",Callback=function(v) materialState.Opacity=v;refreshMaterials();saveAppearance() end})
 local blurControl=Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) materialState.Blur=v;if app.Acrylic then app.Acrylic:SetAmount(v) end;saveAppearance() end})
@@ -2473,10 +2480,13 @@ local function restoreAppearance(data)
     end
     materialState.Mode=choice(data.Mode,{"Off","Basic","Enhanced"},"Enhanced")
     materialState.Palette=choice(data.Palette,{"Aurora","Ice","Sunset","Match theme"},"Aurora")
+    materialState.Finish=choice(data.Finish,{"Classic glass","Soft glass"},"Classic glass")
+    materialState.BorderStyle=choice(data.BorderStyle,{"Full outline","Soft outline","Window only"},"Full outline")
     materialState.Edge=number(data.Edge,0,100,54)
     materialState.Opacity=number(data.Opacity,50,100,85)
     materialState.Blur=number(data.Blur,0,8,3)
     local theme=choice(data.Theme,{"Ocean","Lavender","Rose","Emerald","Slate"},"Ocean")
+    finishControl:Set(materialState.Finish,true);borderStyleControl:Set(materialState.BorderStyle,true)
     themeControl:Set(theme,true);paletteControl:Set(materialState.Palette,true)
     edgeControl:Set(materialState.Edge,true);opacityControl:Set(materialState.Opacity,true);blurControl:Set(materialState.Blur,true)
     applyTheme(theme)
@@ -2694,7 +2704,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.11 DISTINCT SURFACES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.12 CONFIGURABLE CARD FINISH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
