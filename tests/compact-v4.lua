@@ -1460,7 +1460,7 @@ function ColumnLayout.new(parent, deps, props)
 
     local function refresh()
         local scale = deps.UIScale and deps.UIScale.Scale or 1
-        local narrow = frame.AbsoluteSize.X / scale < 550
+        local narrow = deps.Mobile or frame.AbsoluteSize.X / scale < 550
         left.Size = UDim2.new(narrow and 1 or 0.5, narrow and 0 or -(gap / 2), 0, 0)
         right.Size = left.Size
         local leftH = leftList.AbsoluteContentSize.Y / scale
@@ -2166,6 +2166,15 @@ function Desktop.Mount(deps, options)
         end
     end)
 
+    if deps.Mobile then
+        sidebar.Visible=false
+        content.Position=UDim2.fromOffset(12,tokens.Size.Topbar+8)
+        content.Size=UDim2.new(1,-24,1,-(tokens.Size.Topbar+18))
+        heading.Text="SERENITY";heading.TextSize=16
+        heading.Position=UDim2.fromOffset(47,0);heading.Size=UDim2.fromOffset(115,48)
+        star.Position=UDim2.fromOffset(13,10);star.Size=UDim2.fromOffset(30,30)
+        pageButton.Position=UDim2.fromOffset(165,5);pageButton.Size=UDim2.fromOffset(110,38)
+    end
     return app
 end
 
@@ -2222,6 +2231,17 @@ local deps = {
     UserInputService = UserInputService,
     NavItem = NavItem,
 }
+
+local camera=workspace.CurrentCamera
+local viewport=camera and camera.ViewportSize or Vector2.new(1280,720)
+deps.Mobile=UserInputService.TouchEnabled and (not UserInputService.KeyboardEnabled or viewport.Y<600)
+if deps.Mobile then
+    Tokens.Size.Window=Vector2.new(viewport.X<viewport.Y and 380 or 600,380)
+    Tokens.Size.Topbar=48
+    Tokens.Size.Control=46
+    Tokens.Size.Slider=66
+    Tokens.Size.Select=72
+end
 
 local app = Desktop.Mount(deps, {
     Title = "SERENITY HUB",
@@ -2436,6 +2456,7 @@ refreshMaterials=function()
             -- Do not give intentionally transparent heading containers a fill.
             if not (role=="Section" and not object:FindFirstChild("PanelStroke")) then
                 local amount=(100-materialState.Opacity)/100
+                if deps.Mobile then amount=math.min(amount,0.08) end
                 object.BackgroundTransparency=off and 0 or (role=="Shell" and amount or role=="Sidebar" and amount*0.55 or amount*0.8)
                 local g=object:FindFirstChild("GlassSheen") or object:FindFirstChild("ShellTone")
                 if not g then g=Instance.new("UIGradient");g.Name="GlassSheen";g.Parent=object end
@@ -2542,8 +2563,8 @@ do
     local title = card(dashboard, 53)
     title.BackgroundTransparency = 1
     title:FindFirstChild("PanelStroke"):Destroy()
-    label(title,"Dashboard",0,0,-175,31,25)
-    label(title,"Everything you need, in one place.",0,31,-175,22,12,Tokens.Color.TextMuted)
+    label(title,"Dashboard",0,0,deps.Mobile and 0 or -175,31,deps.Mobile and 22 or 25)
+    label(title,"Everything you need, in one place.",0,31,deps.Mobile and 0 or -175,22,12,Tokens.Color.TextMuted)
     local invite=Instance.new("TextButton")
     invite.Name="DashboardDiscord"
     invite.Size=UDim2.fromOffset(162,48)
@@ -2551,6 +2572,7 @@ do
     invite.Text=""
     invite.AutoButtonColor=false
     invite.Parent=title
+    invite.Visible=not deps.Mobile
     Material.Section(invite,Tokens)
     label(invite,"Discord",12,5,-24,20,14)
     local inviteHint=label(invite,"Copy invite · news & updates",12,27,-24,16,10,Tokens.Color.TextMuted)
@@ -2564,6 +2586,7 @@ do
     metrics.Size = UDim2.new(1,-4,0,58)
     metrics.BackgroundTransparency = 1
     metrics.Parent = dashboard
+    metrics.Visible=not deps.Mobile
     for i, entry in ipairs({{"WORKSPACE", "UI preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
         local tile = card(metrics,58)
         tile.Size = UDim2.new(1/3,-7,1,0)
@@ -2744,7 +2767,7 @@ app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
 if savedAppearance then app:RestoreViewState(savedAppearance.View) end
 app.OnViewChanged=saveAppearance
-print("SERENITY M4.17 MOBILE FIT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.18 TOUCH LAYOUT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
