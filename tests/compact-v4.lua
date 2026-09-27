@@ -59,8 +59,8 @@ local Tokens = {}
 Tokens.Size = {
     Window = Vector2.new(780, 540),
     Topbar = 62,
-    Sidebar = 190,
-    SidebarBrand = 68,
+    Sidebar = 172,
+    SidebarBrand = 12,
     SidebarUser = 64,
     SidebarCollapsed = 62,
     Footer = 0,
@@ -121,32 +121,32 @@ Tokens.Space = {
 }
 
 Tokens.Color = {
-    Shell = Color3.fromRGB(29, 43, 63),
+    Shell = Color3.fromRGB(15, 36, 53),
     ShellDeep = Color3.fromRGB(2, 3, 9),
     ShellSoft = Color3.fromRGB(8, 9, 18),
-    Sidebar = Color3.fromRGB(24, 35, 52),
-    Topbar = Color3.fromRGB(27, 40, 59),
+    Sidebar = Color3.fromRGB(13, 32, 48),
+    Topbar = Color3.fromRGB(22, 48, 69),
 
-    Panel = Color3.fromRGB(35, 49, 69),
-    PanelSoft = Color3.fromRGB(39, 54, 75),
+    Panel = Color3.fromRGB(24, 49, 68),
+    PanelSoft = Color3.fromRGB(29, 57, 79),
     Surface = Color3.fromRGB(14, 16, 26),
     SurfaceSoft = Color3.fromRGB(17, 20, 31),
     Control = Color3.fromRGB(17, 20, 31),
     ControlHover = Color3.fromRGB(23, 27, 40),
     RowHover = Color3.fromRGB(23, 27, 40),
-    Inset = Color3.fromRGB(29, 42, 61),
+    Inset = Color3.fromRGB(20, 43, 63),
     InsetHover = Color3.fromRGB(24, 28, 42),
     Popup = Color3.fromRGB(13, 15, 25),
 
-    NavActive = Color3.fromRGB(49, 73, 101),
+    NavActive = Color3.fromRGB(35, 77, 111),
     NavHover = Color3.fromRGB(20, 22, 33),
 
-    Text = Color3.fromRGB(242, 244, 249),
+    Text = Color3.fromRGB(247, 244, 235),
     TextMuted = Color3.fromRGB(171, 177, 191),
     TextDim = Color3.fromRGB(137, 148, 168),
 
     Divider = Color3.fromRGB(38, 41, 54),
-    Stroke = Color3.fromRGB(66, 71, 90),
+    Stroke = Color3.fromRGB(88, 150, 197),
     StrokeBright = Color3.fromRGB(112, 121, 146),
 
     Accent = Color3.fromRGB(72, 130, 255),
@@ -370,7 +370,7 @@ function Material.Section(frame, tokens)
     frame.BackgroundTransparency = tokens.Material.PanelTransparency
     frame.BorderSizePixel = 0
     corner(frame, tokens.Size.RadiusPanel, "PanelCorner")
-    stroke(frame, tokens.Color.Stroke, 0.90, 1, "PanelStroke")
+    stroke(frame, tokens.Color.Stroke, 0.56, 1, "PanelStroke")
     return frame
 end
 
@@ -1462,7 +1462,8 @@ function Desktop.Mount(deps, options)
     -- LEFT SIDEBAR ------------------------------------------------------------
     local sidebar = Instance.new("Frame")
     sidebar.Name = "Sidebar"
-    sidebar.Size = UDim2.new(0, tokens.Size.Sidebar, 1, 0)
+    sidebar.Position = UDim2.fromOffset(0, tokens.Size.Topbar)
+    sidebar.Size = UDim2.new(0, tokens.Size.Sidebar, 1, -tokens.Size.Topbar)
     sidebar.ZIndex = 3
     sidebar.Parent = shell
     deps.Material.Sidebar(sidebar, tokens)
@@ -1472,6 +1473,7 @@ function Desktop.Mount(deps, options)
     brand.Size = UDim2.new(1, 0, 0, tokens.Size.SidebarBrand)
     brand.ZIndex = 4
     brand.Parent = sidebar
+    brand.Visible = false
 
     local logoWrap = Instance.new("Frame")
     logoWrap.Position = UDim2.fromOffset(14, 14)
@@ -1548,8 +1550,8 @@ function Desktop.Mount(deps, options)
     -- RIGHT TOPBAR ------------------------------------------------------------
     local topbar = Instance.new("Frame")
     topbar.Name = "Topbar"
-    topbar.Position = UDim2.fromOffset(tokens.Size.Sidebar, 0)
-    topbar.Size = UDim2.new(1, -tokens.Size.Sidebar, 0, tokens.Size.Topbar)
+    topbar.Position = UDim2.fromOffset(0, 0)
+    topbar.Size = UDim2.new(1, 0, 0, tokens.Size.Topbar)
     topbar.ZIndex = 3
     topbar.Parent = shell
     deps.Material.Topbar(topbar, tokens)
@@ -1591,7 +1593,15 @@ function Desktop.Mount(deps, options)
     end
 
     saveTile.Visible = false
-    local pageButton, pageText = createTopSelect(14, 146, "Automation")
+    local pageButton, pageText = createTopSelect(252, 112, "Dashboard")
+    local star = deps.Typography.Label(topbar, "Page", tokens, "✦", UDim2.fromOffset(18, 0), UDim2.fromOffset(36, tokens.Size.Topbar), Color3.fromRGB(249, 233, 198))
+    star.Font = Enum.Font.Gotham
+    star.TextSize = 34
+    star.ZIndex = 5
+    local heading = deps.Typography.Label(topbar, "Brand", tokens, "SERENITY HUB", UDim2.fromOffset(62, 0), UDim2.fromOffset(182, tokens.Size.Topbar), tokens.Color.Text)
+    heading.Font = Enum.Font.Garamond
+    heading.TextSize = 23
+    heading.ZIndex = 5
     local scopeButton, scopeText = createTopSelect(170, 108, "Global")
     scopeButton.Visible = false
 
@@ -1627,7 +1637,7 @@ function Desktop.Mount(deps, options)
     deps.PopupHost = overlay
 
     makeDraggable(runtime, holder, topbar)
-    makeDraggable(runtime, holder, brand)
+    makeDraggable(runtime, holder, heading)
 
     local pages = {}
     local navItems = {}
@@ -1970,6 +1980,8 @@ local app = Desktop.Mount(deps, {
     BlurSize = 3,
 })
 
+local dashboard = app:AddPage({Id="Dashboard", Title="Dashboard", Icon="dashboard", Accent=Tokens.Color.Accent, Order=-2})
+local about = app:AddPage({Id="About", Title="About", Icon="info", Accent=Tokens.Color.Cyan, Order=-3})
 local automation = app:AddPage({Id="Automation", Title="Automation", Icon="automation", Accent=Tokens.Color.Accent, Group="Main", Order=1})
 local progression = app:AddPage({Id="Progression", Title="Progression", Icon="progression", Accent=Tokens.Color.Lavender, Group="Main", Order=2})
 local shop = app:AddPage({Id="Shop", Title="Shop", Icon="shop", Accent=Tokens.Color.Amber, Group="Common", Order=3})
@@ -2099,7 +2111,84 @@ Toggle.new(controls.Body, deps, {Title="Enabled Toggle", Default=true})
 Toggle.new(controls.Body, deps, {Title="Disabled Toggle", Default=false, Enabled=false})
 Slider.new(controls.Body, deps, {Title="Slider", Min=0, Max=100, Step=1, Default=50, Suffix="%"})
 Select.new(controls.Body, deps, {Title="Dropdown", Options={"Option A","Option B","Option C"}, Default="Option A"})
-app:SelectPage("Automation")
+
+-- Dashboard: local UI preview; no simulated live service counts.
+do
+    local function card(parent, height, color)
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -4, 0, height)
+        frame.Parent = parent
+        Material.Section(frame, Tokens)
+        if color then frame.BackgroundColor3 = color end
+        return frame
+    end
+    local function label(parent, text, x, y, w, h, size, color)
+        local l = Typography.Label(parent, "Control", Tokens, text, UDim2.fromOffset(x,y), UDim2.new(1,w,0,h), color or Tokens.Color.Text)
+        l.TextSize = size
+        return l
+    end
+    local title = card(dashboard, 53)
+    title.BackgroundTransparency = 1
+    title:FindFirstChild("PanelStroke"):Destroy()
+    label(title,"Dashboard",0,0,0,29,23)
+    label(title,"Everything you need, in one place.",0,29,0,22,12,Tokens.Color.TextMuted)
+    local metrics = Instance.new("Frame")
+    metrics.Size = UDim2.new(1,-4,0,58)
+    metrics.BackgroundTransparency = 1
+    metrics.Parent = dashboard
+    for i, entry in ipairs({{"SESSION", "Preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
+        local tile = card(metrics,58)
+        tile.Size = UDim2.new(1/3,-7,1,0)
+        tile.Position = UDim2.new((i-1)/3,(i-1)*3,0,0)
+        label(tile,entry[1],10,7,-20,17,9,Tokens.Color.TextMuted)
+        label(tile,entry[2],10,26,-20,23,13,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
+    end
+    local welcome = card(dashboard,60,Color3.fromRGB(36,83,119))
+    label(welcome,"✦",15,0,-30,60,31,Color3.fromRGB(249,233,198))
+    label(welcome,"Welcome back",57,8,-70,22,16)
+    label(welcome,"Choose a category to get started.",57,31,-70,19,11,Tokens.Color.TextMuted)
+    local cols = ColumnLayout.new(dashboard,deps,{LayoutOrder=4,Gap=10})
+    local quick = Section.new(cols.Left,deps,{Title="Quick settings"})
+    Toggle.new(quick.Body,deps,{Title="Reduced motion",Default=false,Callback=function(v) Motion.Reduced=v end})
+    Select.new(quick.Body,deps,{Title="Glass quality",Options={"Off","Basic","Enhanced"},Default="Off",Callback=function(v) app:SetGlassQuality(v) end})
+    local news = Section.new(cols.Right,deps,{Title="What's new"})
+    for _,item in ipairs({{"Refreshed blue theme","Ivory stars and softer panels."},{"Compact navigation","Readable text, less clutter."},{"Smoother controls","Long sliders and clear selections."}}) do
+        local row=Instance.new("Frame")
+        row.Size=UDim2.new(1,0,0,48)
+        row.BackgroundTransparency=1
+        row.Parent=news.Body
+        label(row,item[1],12,5,-24,20,12)
+        label(row,item[2],12,25,-24,18,10,Tokens.Color.TextMuted)
+    end
+    local community=card(dashboard,51)
+    community.LayoutOrder=5
+    label(community,"Community",13,5,-135,21,14)
+    label(community,"News, releases and updates.",13,27,-135,18,11,Tokens.Color.TextMuted)
+    local button=Instance.new("TextButton")
+    button.Size=UDim2.fromOffset(100,31)
+    button.Position=UDim2.new(1,-113,0.5,-15)
+    button.Text="Discord  ›"
+    button.Font=Enum.Font.GothamMedium
+    button.TextSize=12
+    button.TextColor3=Tokens.Color.Text
+    button.Parent=community
+    Material.Inset(button,Tokens)
+    button.Activated:Connect(function()
+        local copy = setclipboard or toclipboard
+        if copy then
+            local ok=pcall(copy,"https://discord.gg/pWPs7428wE")
+            button.Text=ok and "Copied" or "Copy failed"
+        else button.Text="Copy unavailable" end
+    end)
+    title.LayoutOrder=1;metrics.LayoutOrder=2;welcome.LayoutOrder=3
+    local info=card(about,98)
+    label(info,"✦  Serenity preview",14,12,-28,26,18)
+    local body=label(info,"A compact blue interface. Gameplay controls are demonstrations; live statistics are not connected in this test.",14,43,-28,45,12,Tokens.Color.TextMuted)
+    body.TextWrapped=true
+end
+
+app:SelectPage("Dashboard")
 app:SetGlassQuality("Off")
-print("SERENITY M4.1 BLUE GLASS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.2 STAR BLUE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+
 
