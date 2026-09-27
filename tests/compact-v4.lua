@@ -669,9 +669,26 @@ function NavItem.new(parent, deps, props)
     row.Parent = parent
     deps.Material.NavRow(row, tokens, false)
 
-    local icon = deps.Icons.Create(row, props.Icon or "info", tokens.Size.NavIcon, tokens.Color.TextMuted)
-    icon.AnchorPoint = Vector2.new(0, 0.5)
-    icon.Position = UDim2.new(0, 11, 0.5, 0)
+    local tile=Instance.new("Frame")
+    tile.Name="NavGlassTile";tile.Size=UDim2.fromOffset(28,28)
+    tile.AnchorPoint=Vector2.new(0.5,0.5);tile.Position=UDim2.new(0,22,0.5,0)
+    tile.BackgroundColor3=tokens.Color.PanelSoft;tile.BackgroundTransparency=0.5
+    tile.BorderSizePixel=0;tile.Parent=row
+    local rounding=Instance.new("UICorner");rounding.CornerRadius=UDim.new(0,8);rounding.Parent=tile
+    local rim=Instance.new("UIStroke");rim.Name="NavGlassEdge";rim.Color=Color3.new(1,1,1)
+    rim.Transparency=0.72;rim.Thickness=1;rim.Parent=tile
+    local spectrum=Instance.new("UIGradient");spectrum.Rotation=35
+    spectrum.Color=ColorSequence.new(Color3.fromRGB(135,217,255),Color3.fromRGB(222,175,243));spectrum.Parent=rim
+    local shine=Instance.new("UIGradient");shine.Rotation=115
+    shine.Color=ColorSequence.new(Color3.new(1,1,1),Color3.fromRGB(139,167,204));shine.Parent=tile
+    local scale=Instance.new("UIScale");scale.Parent=tile
+    local marker=Instance.new("Frame");marker.Name="SelectionMarker";marker.BorderSizePixel=0
+    marker.Size=UDim2.fromOffset(2,16);marker.Position=UDim2.new(0,1,0.5,-8)
+    marker.BackgroundColor3=tokens.Color.Accent;marker.BackgroundTransparency=1;marker.Parent=row
+    local curve=Instance.new("UICorner");curve.CornerRadius=UDim.new(1,0);curve.Parent=marker
+    local icon = deps.Icons.Create(tile, props.Icon or "info", tokens.Size.NavIcon-2, tokens.Color.TextMuted)
+    icon.AnchorPoint = Vector2.new(0.5, 0.5)
+    icon.Position = UDim2.fromScale(0.5,0.5)
 
     local label = deps.Typography.Label(
         row,
@@ -687,6 +704,7 @@ function NavItem.new(parent, deps, props)
         Row = row,
         Icon = icon,
         Label = label,
+        Tile=tile, Rim=rim, Marker=marker, Scale=scale,
         Accent = props.Accent or tokens.Color.Accent,
         Selected = false,
         Callback = props.Callback,
@@ -694,6 +712,9 @@ function NavItem.new(parent, deps, props)
     }, NavItem)
 
     row.MouseEnter:Connect(function()
+        deps.Motion:Tween(tile,"Hover",{BackgroundTransparency=0.18})
+        deps.Motion:Tween(rim,"Hover",{Transparency=0.25})
+        deps.Motion:Tween(label,"Hover",{Position=UDim2.fromOffset(deps.Motion.Reduced and 44 or 46,0)})
         if not self.Selected then
             row.BackgroundColor3 = tokens.Color.NavHover
             deps.Motion:Tween(row, "Hover", {BackgroundTransparency = 0.34})
@@ -703,6 +724,10 @@ function NavItem.new(parent, deps, props)
     end)
 
     row.MouseLeave:Connect(function()
+        deps.Motion:Tween(tile,"Hover",{BackgroundTransparency=self.Selected and 0.2 or 0.5})
+        deps.Motion:Tween(rim,"Hover",{Transparency=self.Selected and 0.3 or 0.72})
+        deps.Motion:Tween(label,"Hover",{Position=UDim2.fromOffset(44,0)})
+        deps.Motion:Tween(scale,"Hover",{Scale=1})
         if not self.Selected then
             deps.Motion:Tween(row, "Hover", {BackgroundTransparency = 1})
             label.TextColor3 = tokens.Color.TextMuted
@@ -710,7 +735,13 @@ function NavItem.new(parent, deps, props)
         end
     end)
 
-    row.MouseButton1Click:Connect(function()
+    row.MouseButton1Down:Connect(function()
+        deps.Motion:Tween(scale,0.08,{Scale=deps.Motion.Reduced and 1 or 0.9})
+    end)
+    row.MouseButton1Up:Connect(function()
+        deps.Motion:Tween(scale,"Select",{Scale=1})
+    end)
+    row.Activated:Connect(function()
         if self.Callback then self.Callback() end
     end)
 
@@ -720,7 +751,13 @@ end
 function NavItem:SetSelected(selected)
     self.Selected = not not selected
     local tokens = self.Deps.Tokens
-    self.Deps.Material.NavRow(self.Row, tokens, self.Selected)
+    self.Row.BackgroundColor3=tokens.Color.NavActive
+    self.Deps.Motion:Tween(self.Row,"Select",{BackgroundTransparency=self.Selected and 0.18 or 1})
+    self.Tile.BackgroundColor3=tokens.Color.PanelSoft
+    self.Marker.BackgroundColor3=tokens.Color.Accent
+    self.Deps.Motion:Tween(self.Marker,"Select",{BackgroundTransparency=self.Selected and 0 or 1})
+    self.Deps.Motion:Tween(self.Tile,"Select",{BackgroundTransparency=self.Selected and 0.2 or 0.5})
+    self.Deps.Motion:Tween(self.Rim,"Select",{Transparency=self.Selected and 0.3 or 0.72})
     self.Icon.ImageColor3 = self.Selected and tokens.Color.Accent or tokens.Color.TextMuted
     self.Label.TextColor3 = self.Selected and tokens.Color.Text or tokens.Color.TextMuted
 end
@@ -1813,12 +1850,19 @@ function Desktop.Mount(deps, options)
         local target = pages[id]
         if not target then return end
         deps.PopupManager:Close()
+        local changed=currentPage~=id
         currentPage = id
         pageText.Text = target.Title
         for pageId, entry in pairs(pages) do
             local selected = pageId == id
+            if entry.Transition then entry.Transition:Cancel();entry.Transition=nil end
+            entry.Page.Position=UDim2.fromOffset(0,0)
             entry.Page.Visible = selected
             entry.NavItem:SetSelected(selected)
+            if selected and changed and not deps.Motion.Reduced then
+                entry.Page.Position=UDim2.fromOffset(0,4)
+                entry.Transition=deps.Motion:Tween(entry.Page,"Select",{Position=UDim2.fromOffset(0,0)})
+            end
         end
     end
 
@@ -2585,7 +2629,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.8 APPEARANCE POLISH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.9 GLASS NAVIGATION | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
