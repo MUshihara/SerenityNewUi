@@ -2353,7 +2353,7 @@ local function applyTheme(name)
 end
 
 -- Event-driven materials: no heartbeat, textures or animated full-screen layers.
-local materialState={Mode="Enhanced",Opacity=85,Edge=54,Palette="Aurora",Blur=3,Finish="Classic glass",BorderStyle="Full outline"}
+local materialState={Mode="Enhanced",Opacity=85,Edge=54,Palette="Aurora",Blur=3}
 local appearancePath="Serenity_UI_Test_Appearance_v1.json"
 local HttpService=game:GetService("HttpService")
 local saveRevision=0
@@ -2363,7 +2363,7 @@ saveAppearance=function()
     task.delay(0.7,function()
         if revision~=saveRevision or type(writefile)~="function" then return end
         pcall(function()
-            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur,Finish=materialState.Finish,BorderStyle=materialState.BorderStyle}))
+            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur}))
         end)
     end)
 end
@@ -2402,19 +2402,6 @@ refreshMaterials=function()
                     ColorSequenceKeypoint.new(0.34,Color3.fromRGB(184,208,237)),
                     ColorSequenceKeypoint.new(0.52,Color3.fromRGB(232,241,255)),
                     ColorSequenceKeypoint.new(1,Color3.fromRGB(144,170,209))})
-                -- Each surface has a purpose; avoid repeating the hero reflection.
-                local style=object:GetAttribute("SurfaceStyle") or (role=="Section" and "quiet" or "shell")
-                if style~="hero" and (materialState.Finish=="Soft glass" or style=="editorial") then
-                    g.Rotation=style=="community" and 0 or 90
-                    g.Color=off and ColorSequence.new(Color3.new(1,1,1)) or ColorSequence.new(Color3.fromRGB(245,248,255),Color3.fromRGB(204,216,231))
-                end
-                if style=="editorial" then
-                    object.BackgroundTransparency=1
-                elseif style=="metric" then
-                    object.BackgroundTransparency=off and 0 or amount*0.45
-                elseif style=="community" then
-                    object.BackgroundTransparency=off and 0 or amount*0.65
-                end
                 g.Transparency=NumberSequence.new(0)
                 if not object:FindFirstChildOfClass("UIListLayout") and not object:FindFirstChildOfClass("UIGridLayout") then
                 local lip=object:FindFirstChild("SpecularLip")
@@ -2425,7 +2412,7 @@ refreshMaterials=function()
                     local gl=Instance.new("UIGradient");gl.Name="Spectrum";gl.Parent=lip
                     gl.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.3,0.1),NumberSequenceKeypoint.new(0.7,0.35),NumberSequenceKeypoint.new(1,1)})
                 end
-                lip.Visible=enhanced and (style=="hero" or role=="Shell" or role=="Topbar");lip.BackgroundColor3=Color3.new(1,1,1);lip.BackgroundTransparency=0.24
+                lip.Visible=enhanced;lip.BackgroundColor3=Color3.new(1,1,1);lip.BackgroundTransparency=0.24
                 lip.Spectrum.Color=spectrum
                 end
             end
@@ -2434,13 +2421,7 @@ refreshMaterials=function()
             local outer=object.Parent.Name=="GlassRim"
             object.Color=Color3.new(1,1,1)
             object.Thickness=outer and 1.7 or 1
-            local surface=object.Parent:GetAttribute("SurfaceStyle")
-            object.Transparency=surface=="editorial" and 1 or 1-(materialState.Edge/100)*(outer and 1 or surface=="metric" and 0.3 or 0.57)
-            if not outer and surface~="editorial" then
-                if materialState.BorderStyle=="Full outline" then object.Transparency=1-(materialState.Edge/100)*0.8
-                elseif materialState.BorderStyle=="Soft outline" then object.Transparency=1-(materialState.Edge/100)*0.35
-                else object.Transparency=1 end
-            end
+            object.Transparency=1-(materialState.Edge/100)*(outer and 1 or 0.57)
             local g=object:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
             g.Parent=object;g.Color=spectrum;g.Rotation=35
             g.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.52,0.25),NumberSequenceKeypoint.new(1,0)})
@@ -2463,8 +2444,6 @@ local appearance = Section.new(settingsCols.Left, deps, {Title="Appearance"})
 local themeControl=Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
 glassSelector(appearance.Body,"Glass material")
 local paletteControl=Select.new(appearance.Body,deps,{Title="Border colors",Options={"Aurora","Ice","Sunset","Match theme"},Default="Aurora",Callback=function(v) materialState.Palette=v;refreshMaterials();saveAppearance() end})
-local finishControl=Select.new(appearance.Body,deps,{Title="Panel finish",Options={"Classic glass","Soft glass"},Default="Classic glass",Callback=function(v) materialState.Finish=v;refreshMaterials();saveAppearance() end})
-local borderStyleControl=Select.new(appearance.Body,deps,{Title="Card borders",Options={"Full outline","Soft outline","Window only"},Default="Full outline",Callback=function(v) materialState.BorderStyle=v;refreshMaterials();saveAppearance() end})
 local edgeControl=Slider.new(appearance.Body,deps,{Title="Border intensity",Min=0,Max=100,Step=1,Default=54,Suffix="%",Callback=function(v) materialState.Edge=v;refreshMaterials();saveAppearance() end})
 local opacityControl=Slider.new(appearance.Body,deps,{Title="Material opacity",Min=50,Max=100,Step=1,Default=85,Suffix="%",Callback=function(v) materialState.Opacity=v;refreshMaterials();saveAppearance() end})
 local blurControl=Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) materialState.Blur=v;if app.Acrylic then app.Acrylic:SetAmount(v) end;saveAppearance() end})
@@ -2480,13 +2459,10 @@ local function restoreAppearance(data)
     end
     materialState.Mode=choice(data.Mode,{"Off","Basic","Enhanced"},"Enhanced")
     materialState.Palette=choice(data.Palette,{"Aurora","Ice","Sunset","Match theme"},"Aurora")
-    materialState.Finish=choice(data.Finish,{"Classic glass","Soft glass"},"Classic glass")
-    materialState.BorderStyle=choice(data.BorderStyle,{"Full outline","Soft outline","Window only"},"Full outline")
     materialState.Edge=number(data.Edge,0,100,54)
     materialState.Opacity=number(data.Opacity,50,100,85)
     materialState.Blur=number(data.Blur,0,8,3)
     local theme=choice(data.Theme,{"Ocean","Lavender","Rose","Emerald","Slate"},"Ocean")
-    finishControl:Set(materialState.Finish,true);borderStyleControl:Set(materialState.BorderStyle,true)
     themeControl:Set(theme,true);paletteControl:Set(materialState.Palette,true)
     edgeControl:Set(materialState.Edge,true);opacityControl:Set(materialState.Opacity,true);blurControl:Set(materialState.Blur,true)
     applyTheme(theme)
@@ -2547,19 +2523,12 @@ do
     metrics.Parent = dashboard
     for i, entry in ipairs({{"SESSION", "Preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
         local tile = card(metrics,58)
-        tile:SetAttribute("SurfaceStyle","metric")
-        local rail=Instance.new("Frame");rail.Name="MetricRail";rail.BorderSizePixel=0
-        rail.Position=UDim2.fromOffset(10,1);rail.Size=UDim2.new(1,-20,0,2)
-        rail.BackgroundColor3=i==3 and Tokens.Color.Mint or Tokens.Color.Accent
-        rail.BackgroundTransparency=0.25;rail.Parent=tile
-        local taper=Instance.new("UIGradient");taper.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)});taper.Parent=rail
         tile.Size = UDim2.new(1/3,-7,1,0)
         tile.Position = UDim2.new((i-1)/3,(i-1)*3,0,0)
         label(tile,entry[1],10,7,-20,17,9,Tokens.Color.TextMuted)
         label(tile,entry[2],10,26,-20,25,16,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
     local welcome = card(dashboard,66,Color3.fromRGB(36,83,119))
-    welcome:SetAttribute("SurfaceStyle","hero")
     Material.Emblem(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),"compass")
     label(welcome,"Welcome back",57,9,-70,25,18)
     label(welcome,"Choose a category to get started.",57,36,-70,20,12,Tokens.Color.TextMuted)
@@ -2569,7 +2538,11 @@ do
     Toggle.new(quick.Body,deps,{Title="Reduced motion",Default=false,Callback=function(v) Motion.Reduced=v end})
     glassSelector(quick.Body,"Glass material")
     local news = Section.new(cols.Right,deps,{Title="What's new"})
-    news.Body:SetAttribute("SurfaceStyle","editorial")
+    news.Body:SetAttribute("GlassRole",nil)
+    news.Body.BackgroundTransparency=1
+    for _,child in ipairs(news.Body:GetChildren()) do
+        if child:IsA("UIStroke") or child:IsA("UIGradient") then child:Destroy() end
+    end
     for _,l in ipairs(news.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="What's new"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
     for i,item in ipairs({{"Glass, with balance","Distinct surfaces. Softer reflections."},{"Your own appearance","Saved colors and glass settings."},{"Responsive navigation","Glass icons and subtle transitions."}}) do
         local row=Instance.new("Frame")
@@ -2588,7 +2561,6 @@ do
     end
     local community=card(dashboard,60)
     community.LayoutOrder=5
-    community:SetAttribute("SurfaceStyle","community")
     Material.Emblem(community,UDim2.fromOffset(14,17),25,Tokens.Color.TextMuted,"connection")
     label(community,"Serenity community",49,8,-170,23,14)
     label(community,"News, releases and updates.",49,33,-170,18,11,Tokens.Color.TextMuted)
@@ -2704,7 +2676,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.12 CONFIGURABLE CARD FINISH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.10 RESTORED + NEWS TIMELINE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
