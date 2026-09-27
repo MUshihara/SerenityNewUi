@@ -121,24 +121,24 @@ Tokens.Space = {
 }
 
 Tokens.Color = {
-    Shell = Color3.fromRGB(4, 5, 14),
+    Shell = Color3.fromRGB(29, 43, 63),
     ShellDeep = Color3.fromRGB(2, 3, 9),
     ShellSoft = Color3.fromRGB(8, 9, 18),
-    Sidebar = Color3.fromRGB(7, 8, 15),
-    Topbar = Color3.fromRGB(7, 8, 16),
+    Sidebar = Color3.fromRGB(24, 35, 52),
+    Topbar = Color3.fromRGB(27, 40, 59),
 
-    Panel = Color3.fromRGB(22, 29, 43),
-    PanelSoft = Color3.fromRGB(25, 33, 48),
+    Panel = Color3.fromRGB(35, 49, 69),
+    PanelSoft = Color3.fromRGB(39, 54, 75),
     Surface = Color3.fromRGB(14, 16, 26),
     SurfaceSoft = Color3.fromRGB(17, 20, 31),
     Control = Color3.fromRGB(17, 20, 31),
     ControlHover = Color3.fromRGB(23, 27, 40),
     RowHover = Color3.fromRGB(23, 27, 40),
-    Inset = Color3.fromRGB(18, 21, 33),
+    Inset = Color3.fromRGB(29, 42, 61),
     InsetHover = Color3.fromRGB(24, 28, 42),
     Popup = Color3.fromRGB(13, 15, 25),
 
-    NavActive = Color3.fromRGB(34, 36, 49),
+    NavActive = Color3.fromRGB(49, 73, 101),
     NavHover = Color3.fromRGB(20, 22, 33),
 
     Text = Color3.fromRGB(242, 244, 249),
@@ -162,10 +162,10 @@ Tokens.Color = {
 }
 
 Tokens.Material = {
-    ShellTransparency = 0.10,
+    ShellTransparency = 0.04,
     SidebarTransparency = 0.06,
     TopbarTransparency = 0.08,
-    PanelTransparency = 0.12,
+    PanelTransparency = 0.06,
     SectionTransparency = 0.12,
     ControlTransparency = 1,
     PopupTransparency = 0.04,
@@ -299,20 +299,8 @@ local function stroke(parent, color, transparency, thickness, name)
 end
 
 function Material.Shadow(parent, targetSize, radius, tokens)
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "SoftShadow"
-    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    shadow.Position = UDim2.fromScale(0.5, 0.5)
-    shadow.Size = UDim2.new(targetSize.X.Scale, targetSize.X.Offset + 54, targetSize.Y.Scale, targetSize.Y.Offset + 54)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = SHADOW_IMAGE
-    shadow.ImageColor3 = Color3.fromRGB(5, 6, 12)
-    shadow.ImageTransparency = tokens.Material.ShadowTransparency
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-    shadow.ZIndex = 0
-    shadow.Parent = parent
-    return shadow
+    -- No external shadow layer: avoids the oversized black backing on desktop.
+    return nil
 end
 
 function Material.Shell(frame, tokens)
@@ -326,9 +314,9 @@ function Material.Shell(frame, tokens)
     gradient.Name = "ShellTone"
     gradient.Rotation = 118
     gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(9, 11, 23)),
-        ColorSequenceKeypoint.new(0.45, Color3.fromRGB(4, 5, 14)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 8, 18)),
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(230, 240, 255)),
+        ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(215, 231, 250)),
     })
     gradient.Parent = frame
 
@@ -413,19 +401,6 @@ function Material.Popup(frame, tokens)
     corner(frame, tokens.Size.RadiusPopup, "PopupCorner")
     stroke(frame, tokens.Color.Stroke, 0.52, 1, "PopupStroke")
 
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "PopupShadow"
-    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    shadow.Position = UDim2.fromScale(0.5, 0.5)
-    shadow.Size = UDim2.new(1, 28, 1, 28)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = SHADOW_IMAGE
-    shadow.ImageColor3 = Color3.new(0, 0, 0)
-    shadow.ImageTransparency = 0.52
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-    shadow.ZIndex = frame.ZIndex - 1
-    shadow.Parent = frame
     return frame
 end
 
@@ -2126,5 +2101,5 @@ Slider.new(controls.Body, deps, {Title="Slider", Min=0, Max=100, Step=1, Default
 Select.new(controls.Body, deps, {Title="Dropdown", Options={"Option A","Option B","Option C"}, Default="Option A"})
 app:SelectPage("Automation")
 app:SetGlassQuality("Off")
-print("SERENITY M4 COMPACT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.1 BLUE GLASS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
