@@ -454,6 +454,33 @@ function Material.Hover(frame, tokens, active)
     frame.BackgroundTransparency = active and 0.28 or 1
 end
 
+-- Four tapered rays drawn from Frames; independent of font glyph coverage.
+function Material.Star(parent, position, size, color, z)
+    local root=Instance.new("Frame")
+    root.Name="SerenityStar"
+    root.BackgroundTransparency=1
+    root.Position=position
+    root.Size=UDim2.fromOffset(size,size)
+    root.ZIndex=z or 2
+    root.Parent=parent
+    for i=0,11 do
+        local distance=i/11
+        local thickness=math.max(1, math.floor(size*0.32*(1-distance)^2))
+        for _,axis in ipairs({0,1}) do
+            for _,sign in ipairs({-1,1}) do
+                local ray=Instance.new("Frame")
+                ray.BorderSizePixel=0
+                ray.BackgroundColor3=color
+                ray.AnchorPoint=Vector2.new(0.5,0.5)
+                ray.Size=UDim2.fromOffset(axis==0 and thickness or math.max(1,size/24),axis==0 and math.max(1,size/24) or thickness)
+                ray.Position=UDim2.fromOffset(size/2+(axis==1 and sign*distance*size*0.46 or 0),size/2+(axis==0 and sign*distance*size*0.46 or 0))
+                ray.ZIndex=root.ZIndex
+                ray.Parent=root
+            end
+        end
+    end
+    return root
+end
 return Material
 
 end)()
@@ -1467,6 +1494,7 @@ function Desktop.Mount(deps, options)
     sidebar.ZIndex = 3
     sidebar.Parent = shell
     deps.Material.Sidebar(sidebar, tokens)
+    corner(sidebar,tokens.Size.RadiusShell)
 
     local brand = Instance.new("Frame")
     brand.BackgroundTransparency = 1
@@ -1555,6 +1583,7 @@ function Desktop.Mount(deps, options)
     topbar.ZIndex = 3
     topbar.Parent = shell
     deps.Material.Topbar(topbar, tokens)
+    corner(topbar,tokens.Size.RadiusShell)
 
     local saveTile = Instance.new("Frame")
     saveTile.Position = UDim2.fromOffset(15, 15)
@@ -1594,13 +1623,10 @@ function Desktop.Mount(deps, options)
 
     saveTile.Visible = false
     local pageButton, pageText = createTopSelect(252, 112, "Dashboard")
-    local star = deps.Typography.Label(topbar, "Page", tokens, "✦", UDim2.fromOffset(18, 0), UDim2.fromOffset(36, tokens.Size.Topbar), Color3.fromRGB(249, 233, 198))
-    star.Font = Enum.Font.Gotham
-    star.TextSize = 34
-    star.ZIndex = 5
+    local star = deps.Material.Star(topbar, UDim2.fromOffset(20, 16), 30, Color3.fromRGB(249,233,198), 5)
     local heading = deps.Typography.Label(topbar, "Brand", tokens, "SERENITY HUB", UDim2.fromOffset(62, 0), UDim2.fromOffset(182, tokens.Size.Topbar), tokens.Color.Text)
-    heading.Font = Enum.Font.Garamond
-    heading.TextSize = 23
+    heading.Font = Enum.Font.GothamBold
+    heading.TextSize = 19
     heading.ZIndex = 5
     local scopeButton, scopeText = createTopSelect(170, 108, "Global")
     scopeButton.Visible = false
@@ -2103,7 +2129,45 @@ local miscCols = ColumnLayout.new(misc, deps, {})
 local utility = Section.new(miscCols.Left, deps, {Title="Interaction"})
 Toggle.new(utility.Body, deps, {Title="Reduced Motion", Default=false, Callback=function(v) Motion.Reduced = v end})
 local settingsCols = ColumnLayout.new(settings, deps, {})
+
+local themeBindings={}
+local originalColors={}
+for key,color in pairs(Tokens.Color) do originalColors[key]=color end
+local function applyTheme(name)
+    local hue=({Ocean=0.57,Lavender=0.72,Rose=0.94,Emerald=0.43,Slate=0.60})[name] or 0.57
+    for key,original in pairs(originalColors) do
+        local _,sat,val=original:ToHSV()
+        local semantic=key=="Mint" or key=="Red" or key=="Amber"
+        Tokens.Color[key]=semantic and original or Color3.fromHSV(hue,name=="Slate" and sat*0.18 or sat,val)
+    end
+    for _,object in ipairs(app.ScreenGui:GetDescendants()) do
+        local props={}
+        if object:IsA("GuiObject") then table.insert(props,"BackgroundColor3") end
+        if object:IsA("TextLabel") or object:IsA("TextButton") or object:IsA("TextBox") then table.insert(props,"TextColor3") end
+        if object:IsA("UIStroke") then table.insert(props,"Color") end
+        if object:IsA("ImageLabel") or object:IsA("ImageButton") then table.insert(props,"ImageColor3") end
+        for _,prop in ipairs(props) do
+            themeBindings[object]=themeBindings[object] or {}
+            local binding=themeBindings[object][prop]
+            if not binding then
+                local original=object[prop]
+                for key,color in pairs(originalColors) do
+                    if original==color then binding=key break end
+                end
+                if not binding then binding=original end
+                themeBindings[object][prop]=binding
+            end
+            if type(binding)=="string" then object[prop]=Tokens.Color[binding]
+            elseif object.Name~="" and object.Parent and object.Parent.Name~="SerenityStar" then
+                local _,sat,val=binding:ToHSV()
+                if sat>0.25 and val<0.65 then object[prop]=Color3.fromHSV(hue,name=="Slate" and sat*0.18 or sat,val) end
+            end
+        end
+    end
+end
+
 local appearance = Section.new(settingsCols.Left, deps, {Title="Appearance"})
+Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
 Select.new(appearance.Body, deps, {Title="Glass Quality", Options={"Off","Basic","Enhanced"}, Default="Off", Callback=function(v) app:SetGlassQuality(v) end})
 Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) if app.Acrylic then app.Acrylic:SetAmount(v) end end})
 local controls = Section.new(settingsCols.Right, deps, {Title="Component Test"})
@@ -2144,7 +2208,7 @@ do
         label(tile,entry[2],10,26,-20,23,13,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
     local welcome = card(dashboard,60,Color3.fromRGB(36,83,119))
-    label(welcome,"✦",15,0,-30,60,31,Color3.fromRGB(249,233,198))
+    Material.Star(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),2)
     label(welcome,"Welcome back",57,8,-70,22,16)
     label(welcome,"Choose a category to get started.",57,31,-70,19,11,Tokens.Color.TextMuted)
     local cols = ColumnLayout.new(dashboard,deps,{LayoutOrder=4,Gap=10})
@@ -2182,13 +2246,14 @@ do
     end)
     title.LayoutOrder=1;metrics.LayoutOrder=2;welcome.LayoutOrder=3
     local info=card(about,98)
-    label(info,"✦  Serenity preview",14,12,-28,26,18)
+    label(info,"Serenity preview",14,12,-28,26,18)
     local body=label(info,"A compact blue interface. Gameplay controls are demonstrations; live statistics are not connected in this test.",14,43,-28,45,12,Tokens.Color.TextMuted)
     body.TextWrapped=true
 end
 
 app:SelectPage("Dashboard")
 app:SetGlassQuality("Off")
-print("SERENITY M4.2 STAR BLUE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.3 STAR THEMES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+
 
 
