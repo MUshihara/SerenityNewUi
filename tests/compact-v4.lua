@@ -2496,7 +2496,7 @@ do
         l.Font = size >= 14 and Enum.Font.GothamBold or Enum.Font.Gotham
         return l
     end
-    local title = card(dashboard, 61)
+    local title = card(dashboard, 53)
     title.BackgroundTransparency = 1
     title:FindFirstChild("PanelStroke"):Destroy()
     label(title,"Dashboard",0,0,-175,31,25)
@@ -2521,17 +2521,40 @@ do
     metrics.Size = UDim2.new(1,-4,0,58)
     metrics.BackgroundTransparency = 1
     metrics.Parent = dashboard
-    for i, entry in ipairs({{"SESSION", "Preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
+    for i, entry in ipairs({{"WORKSPACE", "UI preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
         local tile = card(metrics,58)
         tile.Size = UDim2.new(1/3,-7,1,0)
         tile.Position = UDim2.new((i-1)/3,(i-1)*3,0,0)
-        label(tile,entry[1],10,7,-20,17,9,Tokens.Color.TextMuted)
+        local notch=Instance.new("Frame");notch.BorderSizePixel=0
+        notch.Size=UDim2.fromOffset(3,19);notch.Position=UDim2.fromOffset(0,20)
+        notch.BackgroundColor3=i==3 and Tokens.Color.Mint or Tokens.Color.Accent;notch.Parent=tile
+        local curve=Instance.new("UICorner");curve.CornerRadius=UDim.new(1,0);curve.Parent=notch
+        label(tile,entry[1],12,7,-24,17,9,Tokens.Color.TextMuted)
         label(tile,entry[2],10,26,-20,25,16,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
-    local welcome = card(dashboard,66,Color3.fromRGB(36,83,119))
-    Material.Emblem(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),"compass")
-    label(welcome,"Welcome back",57,9,-70,25,18)
-    label(welcome,"Choose a category to get started.",57,36,-70,20,12,Tokens.Color.TextMuted)
+    local welcome = card(dashboard,82,Color3.fromRGB(36,83,119))
+    welcome.ClipsDescendants=true
+    -- Orbital engraving: a static composition, kept away from the text.
+    local engraving=Instance.new("Frame")
+    engraving.BackgroundTransparency=1;engraving.Size=UDim2.fromOffset(140,82)
+    engraving.Position=UDim2.new(1,-140,0,0);engraving.Parent=welcome
+    for i=1,3 do
+        local ring=Instance.new("Frame");ring.BackgroundTransparency=1
+        ring.AnchorPoint=Vector2.new(0.5,0.5);ring.Position=UDim2.fromScale(0.7,0.5)
+        ring.Size=UDim2.fromOffset(48+i*25,48+i*25);ring.Parent=engraving
+        local c=Instance.new("UICorner");c.CornerRadius=UDim.new(1,0);c.Parent=ring
+        local edge=Instance.new("UIStroke");edge.Color=Tokens.Color.Text;edge.Transparency=0.87;edge.Parent=ring
+    end
+    Material.Emblem(welcome,UDim2.fromOffset(16,15),28,Color3.fromRGB(249,233,198),"compass")
+    label(welcome,"Welcome back",56,8,-178,25,18)
+    label(welcome,"Your space. Your settings.",56,33,-178,18,12,Tokens.Color.TextMuted)
+    local launch=Instance.new("TextButton")
+    launch.Name="OpenPlayground";launch.Size=UDim2.fromOffset(108,29)
+    launch.Position=UDim2.new(1,-124,0.5,-14);launch.Text="Explore controls"
+    launch.Font=Enum.Font.GothamMedium;launch.TextSize=11;launch.TextColor3=Tokens.Color.Text
+    launch.Parent=welcome;Material.Inset(launch,Tokens)
+    launch.Activated:Connect(function() app:SelectPage("Playground") end)
+    local detail=label(welcome,"PERSONAL WORKSPACE",16,60,-32,15,9,Tokens.Color.TextMuted)
     local cols = ColumnLayout.new(dashboard,deps,{LayoutOrder=4,Gap=10})
     local quick = Section.new(cols.Left,deps,{Title="Quick settings"})
     for _,l in ipairs(quick.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="Quick settings"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
@@ -2676,7 +2699,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.10 RESTORED + NEWS TIMELINE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.14 ORBIT WORKSPACE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
