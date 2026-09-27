@@ -371,6 +371,16 @@ function Material.Section(frame, tokens)
     frame.BorderSizePixel = 0
     corner(frame, tokens.Size.RadiusPanel, "PanelCorner")
     stroke(frame, tokens.Color.Stroke, 0.56, 1, "PanelStroke")
+    local sheen=Instance.new("UIGradient")
+    sheen.Name="GlassSheen"
+    sheen.Rotation=110
+    sheen.Color=ColorSequence.new(Color3.fromRGB(255,255,255),Color3.fromRGB(191,212,235))
+    sheen.Transparency=NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0.04),
+        NumberSequenceKeypoint.new(0.42,0),
+        NumberSequenceKeypoint.new(1,0.03)
+    })
+    sheen.Parent=frame
     return frame
 end
 
@@ -1687,6 +1697,29 @@ function Desktop.Mount(deps, options)
     overlay.ZIndex = 70
     overlay.Parent = shell
     deps.PopupHost = overlay
+    -- Edge treatment sits above the surfaces, without a shadow image.
+    local rim=Instance.new("Frame")
+    rim.Name="GlassRim"
+    rim.BackgroundTransparency=1
+    rim.Size=UDim2.new(1,-4,1,-4)
+    rim.Position=UDim2.fromOffset(2,2)
+    rim.ZIndex=69
+    rim.Parent=shell
+    corner(rim,tokens.Size.RadiusShell-2)
+    local edge=Instance.new("UIStroke")
+    edge.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+    edge.Color=tokens.Color.Stroke
+    edge.Thickness=1.4
+    edge.Transparency=0.22
+    edge.Parent=rim
+    local edgeFade=Instance.new("UIGradient")
+    edgeFade.Rotation=65
+    edgeFade.Transparency=NumberSequence.new({
+        NumberSequenceKeypoint.new(0,0.05),
+        NumberSequenceKeypoint.new(0.45,0.65),
+        NumberSequenceKeypoint.new(1,0.12)
+    })
+    edgeFade.Parent=edge
 
     makeDraggable(runtime, holder, topbar)
     makeDraggable(runtime, holder, heading)
@@ -2253,13 +2286,28 @@ do
     local function label(parent, text, x, y, w, h, size, color)
         local l = Typography.Label(parent, "Control", Tokens, text, UDim2.fromOffset(x,y), UDim2.new(1,w,0,h), color or Tokens.Color.Text)
         l.TextSize = size
+        l.Font = size >= 14 and Enum.Font.GothamBold or Enum.Font.Gotham
         return l
     end
-    local title = card(dashboard, 53)
+    local title = card(dashboard, 61)
     title.BackgroundTransparency = 1
     title:FindFirstChild("PanelStroke"):Destroy()
-    label(title,"Dashboard",0,0,0,29,23)
-    label(title,"Everything you need, in one place.",0,29,0,22,12,Tokens.Color.TextMuted)
+    label(title,"Dashboard",0,0,-175,31,25)
+    label(title,"Everything you need, in one place.",0,31,-175,22,12,Tokens.Color.TextMuted)
+    local invite=Instance.new("TextButton")
+    invite.Name="DashboardDiscord"
+    invite.Size=UDim2.fromOffset(162,48)
+    invite.Position=UDim2.new(1,-164,0,2)
+    invite.Text=""
+    invite.AutoButtonColor=false
+    invite.Parent=title
+    Material.Section(invite,Tokens)
+    label(invite,"Discord",12,5,-24,20,14)
+    label(invite,"Copy invite · news & updates",12,27,-24,16,9,Tokens.Color.TextMuted)
+    invite.Activated:Connect(function()
+        local copy=setclipboard or toclipboard
+        if copy then pcall(copy,"https://discord.gg/pWPs7428wE") end
+    end)
     local metrics = Instance.new("Frame")
     metrics.Size = UDim2.new(1,-4,0,58)
     metrics.BackgroundTransparency = 1
@@ -2269,24 +2317,26 @@ do
         tile.Size = UDim2.new(1/3,-7,1,0)
         tile.Position = UDim2.new((i-1)/3,(i-1)*3,0,0)
         label(tile,entry[1],10,7,-20,17,9,Tokens.Color.TextMuted)
-        label(tile,entry[2],10,26,-20,23,13,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
+        label(tile,entry[2],10,26,-20,25,16,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
-    local welcome = card(dashboard,60,Color3.fromRGB(36,83,119))
+    local welcome = card(dashboard,66,Color3.fromRGB(36,83,119))
     Material.Star(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),2)
-    label(welcome,"Welcome back",57,8,-70,22,16)
-    label(welcome,"Choose a category to get started.",57,31,-70,19,11,Tokens.Color.TextMuted)
+    label(welcome,"Welcome back",57,9,-70,25,18)
+    label(welcome,"Choose a category to get started.",57,36,-70,20,12,Tokens.Color.TextMuted)
     local cols = ColumnLayout.new(dashboard,deps,{LayoutOrder=4,Gap=10})
     local quick = Section.new(cols.Left,deps,{Title="Quick settings"})
+    for _,l in ipairs(quick.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="Quick settings"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
     Toggle.new(quick.Body,deps,{Title="Reduced motion",Default=false,Callback=function(v) Motion.Reduced=v end})
     Select.new(quick.Body,deps,{Title="Glass quality",Options={"Off","Basic","Enhanced"},Default="Off",Callback=function(v) app:SetGlassQuality(v) end})
     local news = Section.new(cols.Right,deps,{Title="What's new"})
+    for _,l in ipairs(news.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="What's new"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
     for _,item in ipairs({{"Refreshed blue theme","Ivory stars and softer panels."},{"Compact navigation","Readable text, less clutter."},{"Smoother controls","Long sliders and clear selections."}}) do
         local row=Instance.new("Frame")
         row.Size=UDim2.new(1,0,0,48)
         row.BackgroundTransparency=1
         row.Parent=news.Body
-        label(row,item[1],12,5,-24,20,12)
-        label(row,item[2],12,25,-24,18,10,Tokens.Color.TextMuted)
+        label(row,item[1],12,5,-24,20,13)
+        label(row,item[2],12,25,-24,18,11,Tokens.Color.TextMuted)
     end
     local community=card(dashboard,60)
     community.LayoutOrder=5
@@ -2405,7 +2455,7 @@ end
 
 app:SelectPage("Dashboard")
 app:SetGlassQuality("Off")
-print("SERENITY M4.5 FEATURE SEARCH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.6 GLASS DASHBOARD | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
