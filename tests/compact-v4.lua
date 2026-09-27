@@ -2402,6 +2402,19 @@ refreshMaterials=function()
                     ColorSequenceKeypoint.new(0.34,Color3.fromRGB(184,208,237)),
                     ColorSequenceKeypoint.new(0.52,Color3.fromRGB(232,241,255)),
                     ColorSequenceKeypoint.new(1,Color3.fromRGB(144,170,209))})
+                -- Each surface has a purpose; avoid repeating the hero reflection.
+                local style=object:GetAttribute("SurfaceStyle") or (role=="Section" and "quiet" or "shell")
+                if style~="hero" then
+                    g.Rotation=style=="community" and 0 or 90
+                    g.Color=off and ColorSequence.new(Color3.new(1,1,1)) or ColorSequence.new(Color3.fromRGB(245,248,255),Color3.fromRGB(204,216,231))
+                end
+                if style=="editorial" then
+                    object.BackgroundTransparency=1
+                elseif style=="metric" then
+                    object.BackgroundTransparency=off and 0 or amount*0.45
+                elseif style=="community" then
+                    object.BackgroundTransparency=off and 0 or amount*0.65
+                end
                 g.Transparency=NumberSequence.new(0)
                 if not object:FindFirstChildOfClass("UIListLayout") and not object:FindFirstChildOfClass("UIGridLayout") then
                 local lip=object:FindFirstChild("SpecularLip")
@@ -2412,7 +2425,7 @@ refreshMaterials=function()
                     local gl=Instance.new("UIGradient");gl.Name="Spectrum";gl.Parent=lip
                     gl.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.3,0.1),NumberSequenceKeypoint.new(0.7,0.35),NumberSequenceKeypoint.new(1,1)})
                 end
-                lip.Visible=enhanced;lip.BackgroundColor3=Color3.new(1,1,1);lip.BackgroundTransparency=0.24
+                lip.Visible=enhanced and (style=="hero" or role=="Shell" or role=="Topbar");lip.BackgroundColor3=Color3.new(1,1,1);lip.BackgroundTransparency=0.24
                 lip.Spectrum.Color=spectrum
                 end
             end
@@ -2421,7 +2434,8 @@ refreshMaterials=function()
             local outer=object.Parent.Name=="GlassRim"
             object.Color=Color3.new(1,1,1)
             object.Thickness=outer and 1.7 or 1
-            object.Transparency=1-(materialState.Edge/100)*(outer and 1 or 0.57)
+            local surface=object.Parent:GetAttribute("SurfaceStyle")
+            object.Transparency=surface=="editorial" and 1 or 1-(materialState.Edge/100)*(outer and 1 or surface=="metric" and 0.3 or 0.57)
             local g=object:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
             g.Parent=object;g.Color=spectrum;g.Rotation=35
             g.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.52,0.25),NumberSequenceKeypoint.new(1,0)})
@@ -2523,12 +2537,19 @@ do
     metrics.Parent = dashboard
     for i, entry in ipairs({{"SESSION", "Preview"},{"ACTIVE NOW", "Not connected"},{"STATUS", "UI ready"}}) do
         local tile = card(metrics,58)
+        tile:SetAttribute("SurfaceStyle","metric")
+        local rail=Instance.new("Frame");rail.Name="MetricRail";rail.BorderSizePixel=0
+        rail.Position=UDim2.fromOffset(10,1);rail.Size=UDim2.new(1,-20,0,2)
+        rail.BackgroundColor3=i==3 and Tokens.Color.Mint or Tokens.Color.Accent
+        rail.BackgroundTransparency=0.25;rail.Parent=tile
+        local taper=Instance.new("UIGradient");taper.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)});taper.Parent=rail
         tile.Size = UDim2.new(1/3,-7,1,0)
         tile.Position = UDim2.new((i-1)/3,(i-1)*3,0,0)
         label(tile,entry[1],10,7,-20,17,9,Tokens.Color.TextMuted)
         label(tile,entry[2],10,26,-20,25,16,i==3 and Tokens.Color.Mint or Tokens.Color.Text)
     end
     local welcome = card(dashboard,66,Color3.fromRGB(36,83,119))
+    welcome:SetAttribute("SurfaceStyle","hero")
     Material.Emblem(welcome,UDim2.fromOffset(17,16),28,Color3.fromRGB(249,233,198),"compass")
     label(welcome,"Welcome back",57,9,-70,25,18)
     label(welcome,"Choose a category to get started.",57,36,-70,20,12,Tokens.Color.TextMuted)
@@ -2538,17 +2559,26 @@ do
     Toggle.new(quick.Body,deps,{Title="Reduced motion",Default=false,Callback=function(v) Motion.Reduced=v end})
     glassSelector(quick.Body,"Glass material")
     local news = Section.new(cols.Right,deps,{Title="What's new"})
+    news.Body:SetAttribute("SurfaceStyle","editorial")
     for _,l in ipairs(news.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="What's new"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
-    for _,item in ipairs({{"Refreshed blue theme","Ivory stars and softer panels."},{"Compact navigation","Readable text, less clutter."},{"Smoother controls","Long sliders and clear selections."}}) do
+    for i,item in ipairs({{"Glass, with balance","Distinct surfaces. Softer reflections."},{"Your own appearance","Saved colors and glass settings."},{"Responsive navigation","Glass icons and subtle transitions."}}) do
         local row=Instance.new("Frame")
         row.Size=UDim2.new(1,0,0,48)
         row.BackgroundTransparency=1
         row.Parent=news.Body
-        label(row,item[1],12,5,-24,20,13)
-        label(row,item[2],12,25,-24,18,11,Tokens.Color.TextMuted)
+        local dot=Instance.new("Frame");dot.BorderSizePixel=0;dot.Size=UDim2.fromOffset(5,5)
+        dot.Position=UDim2.fromOffset(5,12);dot.BackgroundColor3=Tokens.Color.Accent;dot.Parent=row
+        local round=Instance.new("UICorner");round.CornerRadius=UDim.new(1,0);round.Parent=dot
+        if i<3 then
+            local track=Instance.new("Frame");track.BorderSizePixel=0;track.Size=UDim2.fromOffset(1,35)
+            track.Position=UDim2.fromOffset(7,19);track.BackgroundColor3=Tokens.Color.Stroke;track.BackgroundTransparency=0.7;track.Parent=row
+        end
+        label(row,item[1],21,3,-29,20,13)
+        label(row,item[2],21,23,-29,18,11,Tokens.Color.TextMuted)
     end
     local community=card(dashboard,60)
     community.LayoutOrder=5
+    community:SetAttribute("SurfaceStyle","community")
     Material.Emblem(community,UDim2.fromOffset(14,17),25,Tokens.Color.TextMuted,"connection")
     label(community,"Serenity community",49,8,-170,23,14)
     label(community,"News, releases and updates.",49,33,-170,18,11,Tokens.Color.TextMuted)
@@ -2664,7 +2694,7 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.10 DISTINCT EMBLEMS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.11 DISTINCT SURFACES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
