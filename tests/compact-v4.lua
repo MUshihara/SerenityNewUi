@@ -304,6 +304,7 @@ function Material.Shadow(parent, targetSize, radius, tokens)
 end
 
 function Material.Shell(frame, tokens)
+    frame:SetAttribute("GlassRole", "Shell")
     frame.BackgroundColor3 = tokens.Color.Shell
     frame.BackgroundTransparency = tokens.Material.ShellTransparency
     frame.BorderSizePixel = 0
@@ -333,6 +334,7 @@ function Material.Shell(frame, tokens)
 end
 
 function Material.Sidebar(frame, tokens)
+    frame:SetAttribute("GlassRole", "Sidebar")
     frame.BackgroundColor3 = tokens.Color.Sidebar
     frame.BackgroundTransparency = tokens.Material.SidebarTransparency
     frame.BorderSizePixel = 0
@@ -350,6 +352,7 @@ function Material.Sidebar(frame, tokens)
 end
 
 function Material.Topbar(frame, tokens)
+    frame:SetAttribute("GlassRole", "Topbar")
     frame.BackgroundColor3 = tokens.Color.Topbar
     frame.BackgroundTransparency = tokens.Material.TopbarTransparency
     frame.BorderSizePixel = 0
@@ -366,6 +369,7 @@ function Material.Topbar(frame, tokens)
 end
 
 function Material.Section(frame, tokens)
+    frame:SetAttribute("GlassRole", "Section")
     frame.BackgroundColor3 = tokens.Color.Panel
     frame.BackgroundTransparency = tokens.Material.PanelTransparency
     frame.BorderSizePixel = 0
@@ -2227,7 +2231,8 @@ local utility = Section.new(miscCols.Left, deps, {Title="Interaction"})
 Toggle.new(utility.Body, deps, {Title="Reduced Motion", Default=false, Callback=function(v) Motion.Reduced = v end})
 local settingsCols = ColumnLayout.new(settings, deps, {})
 
-local themeBindings={}
+local themeBindings=setmetatable({}, {__mode="k"})
+local refreshMaterials
 local originalColors={}
 for key,color in pairs(Tokens.Color) do originalColors[key]=color end
 local function applyTheme(name)
@@ -2261,11 +2266,84 @@ local function applyTheme(name)
             end
         end
     end
+    if refreshMaterials then refreshMaterials() end
 end
 
+-- Event-driven materials: no heartbeat, textures or animated full-screen layers.
+local materialState={Mode="Enhanced",Opacity=72,Edge=80,Palette="Aurora"}
+local glassSelectors={}
+local edgePalettes={
+    Aurora={Color3.fromRGB(107,224,255),Color3.fromRGB(174,153,255),Color3.fromRGB(255,206,163)},
+    Ice={Color3.fromRGB(111,190,255),Color3.fromRGB(222,250,255),Color3.fromRGB(112,240,219)},
+    Sunset={Color3.fromRGB(255,170,114),Color3.fromRGB(255,148,200),Color3.fromRGB(175,158,255)},
+}
+refreshMaterials=function()
+    local enhanced=materialState.Mode=="Enhanced"
+    local off=materialState.Mode=="Off"
+    local colors=edgePalettes[materialState.Palette]
+    if not colors then
+        local h=select(1,Tokens.Color.Accent:ToHSV())
+        colors={Color3.fromHSV(h,0.60,1),Color3.fromHSV((h+0.13)%1,0.32,1),Color3.fromHSV((h+0.28)%1,0.48,1)}
+    end
+    local spectrum=ColorSequence.new({ColorSequenceKeypoint.new(0,colors[1]),ColorSequenceKeypoint.new(0.48,colors[2]),ColorSequenceKeypoint.new(1,colors[3])})
+    for _,object in ipairs(app.ScreenGui:GetDescendants()) do
+        local role=object:GetAttribute("GlassRole")
+        if role and object:IsA("GuiObject") then
+            -- Do not give intentionally transparent heading containers a fill.
+            if not (role=="Section" and not object:FindFirstChild("PanelStroke")) then
+                local amount=(100-materialState.Opacity)/100
+                object.BackgroundTransparency=off and 0 or (role=="Shell" and amount or role=="Sidebar" and amount*0.55 or amount*0.8)
+                local g=object:FindFirstChild("GlassSheen") or object:FindFirstChild("ShellTone")
+                if not g then g=Instance.new("UIGradient");g.Name="GlassSheen";g.Parent=object end
+                g.Rotation=115
+                g.Color=off and ColorSequence.new(Color3.new(1,1,1)) or ColorSequence.new({
+                    ColorSequenceKeypoint.new(0,Color3.new(1,1,1)),
+                    ColorSequenceKeypoint.new(0.34,Color3.fromRGB(184,208,237)),
+                    ColorSequenceKeypoint.new(0.52,Color3.fromRGB(232,241,255)),
+                    ColorSequenceKeypoint.new(1,Color3.fromRGB(144,170,209))})
+                g.Transparency=NumberSequence.new(0)
+                if not object:FindFirstChildOfClass("UIListLayout") and not object:FindFirstChildOfClass("UIGridLayout") then
+                local lip=object:FindFirstChild("SpecularLip")
+                if not lip then
+                    lip=Instance.new("Frame");lip.Name="SpecularLip";lip.BorderSizePixel=0
+                    lip.Position=UDim2.fromOffset(12,1);lip.Size=UDim2.new(1,-24,0,1)
+                    lip.ZIndex=object.ZIndex+1;lip.Active=false;lip.Parent=object
+                    local gl=Instance.new("UIGradient");gl.Name="Spectrum";gl.Parent=lip
+                    gl.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.3,0.1),NumberSequenceKeypoint.new(0.7,0.35),NumberSequenceKeypoint.new(1,1)})
+                end
+                lip.Visible=enhanced;lip.BackgroundColor3=Color3.new(1,1,1);lip.BackgroundTransparency=0.24
+                lip.Spectrum.Color=spectrum
+                end
+            end
+        end
+        if object:IsA("UIStroke") and (object.Name=="PanelStroke" or object.Name=="ShellEdge" or object.Parent.Name=="GlassRim") then
+            local outer=object.Parent.Name=="GlassRim"
+            object.Color=Color3.new(1,1,1)
+            object.Thickness=outer and 1.7 or 1
+            object.Transparency=1-(materialState.Edge/100)*(outer and 1 or 0.57)
+            local g=object:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+            g.Parent=object;g.Color=spectrum;g.Rotation=35
+            g.Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.52,0.25),NumberSequenceKeypoint.new(1,0)})
+        end
+    end
+end
+function app:SetGlassQuality(value)
+    materialState.Mode=value
+    if self.Acrylic then self.Acrylic:SetQuality(value) end
+    for _,control in ipairs(glassSelectors) do control:Set(value,true) end
+    refreshMaterials()
+end
+local function glassSelector(parent,title)
+    local control=Select.new(parent,deps,{Title=title,Options={"Off","Basic","Enhanced"},Default=materialState.Mode,Callback=function(v) app:SetGlassQuality(v) end})
+    table.insert(glassSelectors,control)
+    return control
+end
 local appearance = Section.new(settingsCols.Left, deps, {Title="Appearance"})
 Select.new(appearance.Body,deps,{Title="Color theme",Options={"Ocean","Lavender","Rose","Emerald","Slate"},Default="Ocean",Callback=applyTheme})
-Select.new(appearance.Body, deps, {Title="Glass Quality", Options={"Off","Basic","Enhanced"}, Default="Off", Callback=function(v) app:SetGlassQuality(v) end})
+glassSelector(appearance.Body,"Glass material")
+Select.new(appearance.Body,deps,{Title="Border colors",Options={"Aurora","Ice","Sunset","Match theme"},Default="Aurora",Callback=function(v) materialState.Palette=v;refreshMaterials() end})
+Slider.new(appearance.Body,deps,{Title="Border intensity",Min=0,Max=100,Step=1,Default=80,Suffix="%",Callback=function(v) materialState.Edge=v;refreshMaterials() end})
+Slider.new(appearance.Body,deps,{Title="Material opacity",Min=50,Max=100,Step=1,Default=72,Suffix="%",Callback=function(v) materialState.Opacity=v;refreshMaterials() end})
 Slider.new(appearance.Body, deps, {Title="Blur Amount", Min=0, Max=8, Step=1, Default=3, Callback=function(v) if app.Acrylic then app.Acrylic:SetAmount(v) end end})
 local controls = Section.new(settingsCols.Right, deps, {Title="Component Test"})
 Toggle.new(controls.Body, deps, {Title="Enabled Toggle", Default=true})
@@ -2327,7 +2405,7 @@ do
     local quick = Section.new(cols.Left,deps,{Title="Quick settings"})
     for _,l in ipairs(quick.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="Quick settings"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
     Toggle.new(quick.Body,deps,{Title="Reduced motion",Default=false,Callback=function(v) Motion.Reduced=v end})
-    Select.new(quick.Body,deps,{Title="Glass quality",Options={"Off","Basic","Enhanced"},Default="Off",Callback=function(v) app:SetGlassQuality(v) end})
+    glassSelector(quick.Body,"Glass material")
     local news = Section.new(cols.Right,deps,{Title="What's new"})
     for _,l in ipairs(news.Header:GetChildren()) do if l:IsA("TextLabel") then l.Text="What's new"; l.TextSize=15; l.Font=Enum.Font.GothamBold; l.TextColor3=Tokens.Color.Text end end
     for _,item in ipairs({{"Refreshed blue theme","Ivory stars and softer panels."},{"Compact navigation","Readable text, less clutter."},{"Smoother controls","Long sliders and clear selections."}}) do
@@ -2454,8 +2532,9 @@ do
 end
 
 app:SelectPage("Dashboard")
-app:SetGlassQuality("Off")
-print("SERENITY M4.6 GLASS DASHBOARD | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+app:SetGlassQuality("Enhanced")
+print("SERENITY M4.7 IRIDESCENT MATERIALS | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+
 
 
 
