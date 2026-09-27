@@ -846,6 +846,8 @@ function Toggle.new(parent, deps, props)
 
     local row = Instance.new("CanvasGroup")
     row.Name = props.Id or "Toggle"
+    row:SetAttribute("FeatureTitle", props.Title or "Toggle")
+    row:SetAttribute("FeatureDescription", props.Description or "")
     row.Size = UDim2.new(1, 0, 0, height)
     row.Parent = parent
     deps.Material.Control(row, tokens)
@@ -975,6 +977,8 @@ function Slider.new(parent, deps, props)
 
     local row = Instance.new("CanvasGroup")
     row.Name = props.Id or "Slider"
+    row:SetAttribute("FeatureTitle", props.Title or "Slider")
+    row:SetAttribute("FeatureDescription", props.Description or "")
     row.Size = UDim2.new(1, 0, 0, tokens.Size.Slider)
     row.Parent = parent
     deps.Material.Control(row, tokens)
@@ -1165,6 +1169,8 @@ function Select.new(parent, deps, props)
 
     local row = Instance.new("CanvasGroup")
     row.Name = props.Id or "Select"
+    row:SetAttribute("FeatureTitle", props.Title or "Select")
+    row:SetAttribute("FeatureDescription", props.Description or "")
     row.Size = UDim2.new(1, 0, 0, height)
     row.Parent = parent
     deps.Material.Control(row, tokens)
@@ -1814,7 +1820,7 @@ function Desktop.Mount(deps, options)
     minimize.Activated:Connect(function() app:SetVisible(false) restore.Visible = true end)
     restore.Activated:Connect(function() app:SetVisible(true) restore.Visible = false end)
 
-    local function createSearchPopup()
+    local function createSearchPopup(categoriesOnly)
         if not holder.Visible then return end
         deps.PopupManager:Close()
         local popup = Instance.new("Frame")
@@ -1829,7 +1835,7 @@ function Desktop.Mount(deps, options)
         input.Position = UDim2.fromOffset(8, 8)
         input.Size = UDim2.new(1, -16, 0, 34)
         input.Text = ""
-        input.PlaceholderText = "Search pages..."
+        input.PlaceholderText = categoriesOnly and "Filter categories..." or "Search all features..."
         input.PlaceholderColor3 = tokens.Color.TextDim
         input.TextColor3 = tokens.Color.Text
         input.TextSize = tokens.Type.Value
@@ -1854,35 +1860,72 @@ function Desktop.Mount(deps, options)
         listFrame.Parent = popup
         local ll = Instance.new("UIListLayout") ll.Padding = UDim.new(0, 3) ll.Parent = listFrame
 
-        local rows = {}
+        local matches = {}
         for _, entry in ipairs(navItems) do
-            local row = Instance.new("TextButton")
-            row.Size = UDim2.new(1, -2, 0, 35)
-            row.BackgroundColor3 = tokens.Color.PanelSoft
-            row.BackgroundTransparency = 0.44
-            row.BorderSizePixel = 0
-            row.Text = ""
-            row.AutoButtonColor = false
-            row.ZIndex = 82
-            row.Parent = listFrame
-            corner(row, 6)
-            local icon = deps.Icons.Create(row, entry.NavItem.Icon.Name:gsub("Icon_", ""), 14, entry.Accent)
-            icon.Position = UDim2.fromOffset(10, 10)
-            icon.ZIndex = 83
-            local text = deps.Typography.Label(row, "Value", tokens, entry.Title, UDim2.fromOffset(34, 0), UDim2.new(1, -42, 1, 0), tokens.Color.TextMuted)
-            text.ZIndex = 83
-            rows[entry.Id] = {Frame = row, Search = string.lower(entry.Title)}
-            row.MouseButton1Click:Connect(function()
-                app:SelectPage(entry.Id)
-                deps.PopupManager:Close()
+            if categoriesOnly then
+                table.insert(matches,{Entry=entry,Title=entry.Title})
+            else
+                for _, target in ipairs(entry.Page:GetDescendants()) do
+                    local title=target:GetAttribute("FeatureTitle")
+                    if not title and target:IsA("TextButton") and target.Text~="" then title=target.Text end
+                    if not title and target:IsA("TextBox") and target.PlaceholderText~="" then title=target.PlaceholderText end
+                    if title then table.insert(matches,{Entry=entry,Title=title,Target=target,Description=target:GetAttribute("FeatureDescription") or ""}) end
+                end
+            end
+        end
+        table.sort(matches,function(a,b) return (a.Title..a.Entry.Title)<(b.Title..b.Entry.Title) end)
+        local rows={}
+        local function jump(match)
+            app:SelectPage(match.Entry.Id)
+            local target=match.Target
+            if not target then return end
+            local ancestor=target.Parent
+            while ancestor and ancestor~=match.Entry.Page do
+                if ancestor:IsA("GuiObject") then ancestor.Visible=true end
+                ancestor=ancestor.Parent
+            end
+            task.defer(function()
+                if runtime.Destroyed or not target.Parent then return end
+                local page=match.Entry.Page
+                local y=target.AbsolutePosition.Y-page.AbsolutePosition.Y+page.CanvasPosition.Y-18
+                page.CanvasPosition=Vector2.new(0,math.clamp(y,0,math.max(0,page.AbsoluteCanvasSize.Y-page.AbsoluteWindowSize.Y)))
+                local outline=Instance.new("UIStroke")
+                outline.Name="SearchHighlight";outline.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+                outline.Color=tokens.Color.Accent;outline.Thickness=2;outline.Parent=target
+                task.delay(1.5,function() if outline.Parent then outline:Destroy() end end)
             end)
         end
-
-        input:GetPropertyChangedSignal("Text"):Connect(function()
-            local q = string.lower(input.Text or "")
-            for _, data in pairs(rows) do
-                data.Frame.Visible = q == "" or string.find(data.Search, q, 1, true) ~= nil
+        for _,match in ipairs(matches) do
+            local row=Instance.new("TextButton")
+            row.Size=UDim2.new(1,-2,0,categoriesOnly and 35 or 48)
+            row.BackgroundColor3=tokens.Color.PanelSoft;row.BackgroundTransparency=0.12
+            row.BorderSizePixel=0;row.Text="";row.AutoButtonColor=false;row.ZIndex=82;row.Parent=listFrame
+            corner(row,6)
+            local title=deps.Typography.Label(row,"Value",tokens,match.Title,UDim2.fromOffset(10,4),UDim2.new(1,-20,0,25),tokens.Color.Text)
+            title.ZIndex=83
+            if not categoriesOnly then
+                local subtitle=deps.Typography.Label(row,"Description",tokens,match.Entry.Title,UDim2.fromOffset(10,28),UDim2.new(1,-20,0,15),tokens.Color.TextMuted)
+                subtitle.ZIndex=83
             end
+            table.insert(rows,{Frame=row,Match=match,Search=string.lower(match.Title.." "..match.Entry.Title.." "..(match.Description or ""))})
+            row.Activated:Connect(function() jump(match) end)
+        end
+        local empty=deps.Typography.Label(listFrame,"Value",tokens,"No matching features",UDim2.new(),UDim2.new(1,-10,0,40),tokens.Color.TextMuted)
+        empty.ZIndex=83;empty.Visible=false
+        input:GetPropertyChangedSignal("Text"):Connect(function()
+            local q=string.lower(input.Text or "")
+            local count=0
+            for _,data in ipairs(rows) do
+                local visible=true
+                for word in q:gmatch("%S+") do if not string.find(data.Search,word,1,true) then visible=false break end end
+                data.Frame.Visible=visible
+                if visible then count=count+1 end
+            end
+            empty.Visible=count==0
+            listFrame.CanvasPosition=Vector2.new()
+        end)
+        input.FocusLost:Connect(function(enter)
+            if enter then for _,data in ipairs(rows) do if data.Frame.Visible then jump(data.Match) break end end end
         end)
 
         deps.PopupManager:Set(popup)
@@ -1941,8 +1984,8 @@ function Desktop.Mount(deps, options)
         if point.X < p.X or point.Y < p.Y or point.X > p.X + size.X or point.Y > p.Y + size.Y then deps.PopupManager:Close() end
     end))
 
-    searchButton.MouseButton1Click:Connect(createSearchPopup)
-    pageButton.MouseButton1Click:Connect(createSearchPopup)
+    searchButton.MouseButton1Click:Connect(function() createSearchPopup(false) end)
+    pageButton.MouseButton1Click:Connect(function() createSearchPopup(true) end)
     scopeButton.MouseButton1Click:Connect(createScopePopup)
 
     runtime:TrackConnection(UserInputService.InputBegan:Connect(function(input, processed)
@@ -2245,14 +2288,15 @@ do
         label(row,item[1],12,5,-24,20,12)
         label(row,item[2],12,25,-24,18,10,Tokens.Color.TextMuted)
     end
-    local community=card(dashboard,51)
+    local community=card(dashboard,60)
     community.LayoutOrder=5
-    label(community,"Community",13,5,-135,21,14)
-    label(community,"News, releases and updates.",13,27,-135,18,11,Tokens.Color.TextMuted)
+    Material.Star(community,UDim2.fromOffset(14,17),25,Tokens.Color.TextMuted,2)
+    label(community,"Serenity community",49,8,-170,23,14)
+    label(community,"News, releases and updates.",49,33,-170,18,11,Tokens.Color.TextMuted)
     local button=Instance.new("TextButton")
     button.Size=UDim2.fromOffset(100,31)
     button.Position=UDim2.new(1,-113,0.5,-15)
-    button.Text="Discord  ›"
+    button.Text="Copy invite"
     button.Font=Enum.Font.GothamMedium
     button.TextSize=12
     button.TextColor3=Tokens.Color.Text
@@ -2262,7 +2306,8 @@ do
         local copy = setclipboard or toclipboard
         if copy then
             local ok=pcall(copy,"https://discord.gg/pWPs7428wE")
-            button.Text=ok and "Copied" or "Copy failed"
+            button.Text=ok and "Invite copied" or "Copy failed"
+            task.delay(2,function() if button.Parent then button.Text="Copy invite" end end)
         else button.Text="Copy unavailable" end
     end)
     title.LayoutOrder=1;metrics.LayoutOrder=2;welcome.LayoutOrder=3
@@ -2360,7 +2405,8 @@ end
 
 app:SelectPage("Dashboard")
 app:SetGlassQuality("Off")
-print("SERENITY M4.4 PLAYGROUND | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.5 FEATURE SEARCH | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+
 
 
 
