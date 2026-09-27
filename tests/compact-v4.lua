@@ -1001,7 +1001,12 @@ function Slider.new(parent, deps, props)
     valueBox.Parent = row
     deps.Material.Inset(valueBox, tokens)
 
-    local valueLabel = deps.Typography.Label(valueBox, "Value", tokens, tostring(value) .. suffix, UDim2.new(), UDim2.fromScale(1, 1), tokens.Color.TextMuted)
+    local valueLabel = Instance.new("TextBox")
+    valueLabel.Size=UDim2.fromScale(1,1)
+    valueLabel.ClearTextOnFocus=false
+    valueLabel.Text=tostring(value)
+    valueLabel.Parent=valueBox
+    deps.Typography.Apply(valueLabel,"Value",tokens,tokens.Color.TextMuted)
     valueLabel.TextXAlignment = Enum.TextXAlignment.Center
 
     local bar = Instance.new("Frame")
@@ -1098,11 +1103,26 @@ function Slider.new(parent, deps, props)
         end
     end))
 
+    valueLabel.Focused:Connect(function()
+        if not self.Enabled then valueLabel:ReleaseFocus() return end
+        valueLabel.Text=tostring(self.Value)
+    end)
+    valueLabel.FocusLost:Connect(function()
+        local number=tonumber(valueLabel.Text)
+        if self.Enabled and number and number==number and math.abs(number)<math.huge then self:Set(number) end
+        self:_render()
+    end)
+    valueBox.InputChanged:Connect(function(input)
+        if input.UserInputType==Enum.UserInputType.MouseWheel and self.Enabled then
+            self:Set(self.Value+input.Position.Z*self.Step)
+        end
+    end)
     self:_render()
     return self
 end
 
 function Slider:Set(value, silent)
+    if type(value)~="number" or value~=value or math.abs(value)==math.huge then return end
     local nextValue = math.clamp(self.Min + math.floor((value - self.Min) / self.Step + 0.5) * self.Step, self.Min, self.Max)
     if nextValue == self.Value then return end
     self.Value = nextValue
@@ -1682,6 +1702,7 @@ function Desktop.Mount(deps, options)
         PageButton = pageButton,
         ScopeButton = scopeButton,
         Acrylic = acrylic,
+        ProfileButton = userFrame,
     }
 
     local function addGroupLabel(name, order)
@@ -1700,7 +1721,7 @@ function Desktop.Mount(deps, options)
         props = props or {}
         local id = props.Id or props.Title
         local accent = props.Accent or tokens.Color.Accent
-        local order = props.Order or (#navItems + 1)
+        local order = (props.Order or (#navItems + 1)) + 4
 
         if props.Group then addGroupLabel(props.Group, order * 10 - 1) end
 
@@ -2251,9 +2272,96 @@ do
     body.TextWrapped=true
 end
 
+
+-- Interactive component laboratory. All actions remain local to this preview.
+do
+    local player=game:GetService("Players").LocalPlayer
+    local profile=app:AddPage({Id="Profile",Title="Profile",Icon="info",Group="System",Order=8})
+    app.ProfileButton.Activated:Connect(function() app:SelectPage("Profile") end)
+    local lab=app:AddPage({Id="Playground",Title="Playground",Icon="settings",Group="System",Order=9})
+    local function text(parent,message,height)
+        local label=Typography.Label(parent,"Control",Tokens,message,UDim2.new(),UDim2.new(1,-20,0,height or 32),Tokens.Color.Text)
+        label.TextWrapped=true
+        return label
+    end
+    local function button(parent,title,callback)
+        local b=Instance.new("TextButton")
+        b.Size=UDim2.new(1,0,0,34)
+        b.Text=title;b.TextSize=12;b.Font=Enum.Font.GothamMedium
+        b.TextColor3=Tokens.Color.Text;b.Parent=parent
+        Material.Inset(b,Tokens)
+        b.Activated:Connect(callback)
+        return b
+    end
+    local profileSection=Section.new(profile,deps,{Title="Your profile"})
+    text(profileSection.Body,player.DisplayName,32)
+    text(profileSection.Body,"@"..player.Name,28)
+    text(profileSection.Body,"User ID: "..player.UserId,28)
+    text(profileSection.Body,"Local UI preview — no account changes.",32)
+    button(profileSection.Body,"Open component playground",function() app:SelectPage("Playground") end)
+    local columns=ColumnLayout.new(lab,deps,{Gap=10})
+    local status=Section.new(columns.Left,deps,{Title="Interaction result"})
+    local result=text(status.Body,"Ready — try a control.",48)
+    local function report(value) result.Text=tostring(value) end
+    local actions=Section.new(columns.Left,deps,{Title="Buttons & toggles",Collapsible=true})
+    local count=0
+    button(actions.Body,"Click counter",function() count=count+1;report("Button clicks: "..count) end)
+    local disabled=button(actions.Body,"Disabled button",function() end)
+    disabled.Active=false;disabled.AutoButtonColor=false;disabled.TextTransparency=0.6
+    Toggle.new(actions.Body,deps,{Title="Enabled toggle",Default=true,Callback=function(v) report("Toggle: "..tostring(v)) end})
+    Toggle.new(actions.Body,deps,{Title="Disabled toggle",Enabled=false,Default=false})
+    local numbers=Section.new(columns.Left,deps,{Title="Drag / type / wheel"})
+    Slider.new(numbers.Body,deps,{Title="Amount (1–100)",Min=1,Max=100,Step=1,Default=5,Callback=report})
+    Slider.new(numbers.Body,deps,{Title="Delay (0–2 seconds)",Min=0,Max=2,Step=0.1,Default=0.5,Suffix="s",Callback=report})
+    Slider.new(numbers.Body,deps,{Title="Signed (-50–50)",Min=-50,Max=50,Step=5,Default=0,Callback=report})
+    local choices=Section.new(columns.Right,deps,{Title="Dropdown & multi-select",Collapsible=true})
+    local options={};for i=1,30 do options[i]="Option "..i end
+    Select.new(choices.Body,deps,{Title="Scrollable options",Options=options,Default=options[1],Callback=report})
+    local selected={}
+    for _,name in ipairs({"Rare","Epic","Legendary"}) do
+        Toggle.new(choices.Body,deps,{Title=name,Default=false,Callback=function(v)
+            selected[name]=v
+            local names={};for _,n in ipairs({"Rare","Epic","Legendary"}) do if selected[n] then table.insert(names,n) end end
+            report("Selected: "..(#names>0 and table.concat(names,", ") or "none"))
+        end})
+    end
+    local inputs=Section.new(columns.Right,deps,{Title="Text input"})
+    local input=Instance.new("TextBox")
+    input.Size=UDim2.new(1,0,0,34);input.Text="";input.PlaceholderText="Type here, then press Enter"
+    input.ClearTextOnFocus=false;input.TextSize=12;input.Font=Enum.Font.GothamMedium
+    input.TextColor3=Tokens.Color.Text;input.PlaceholderColor3=Tokens.Color.TextMuted
+    input.Parent=inputs.Body;Material.Inset(input,Tokens)
+    input.FocusLost:Connect(function(enter) if enter then report("Submitted: "..input.Text:sub(1,100)) end end)
+    local list=Section.new(columns.Right,deps,{Title="Searchable scrolling list"})
+    local search=input:Clone();search.PlaceholderText="Filter items";search.Parent=list.Body
+    local scroller=Instance.new("ScrollingFrame")
+    scroller.Size=UDim2.new(1,0,0,140);scroller.BackgroundTransparency=1;scroller.BorderSizePixel=0
+    scroller.CanvasSize=UDim2.new();scroller.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    scroller.ScrollBarThickness=3;scroller.Parent=list.Body
+    local layout=Instance.new("UIListLayout");layout.Padding=UDim.new(0,3);layout.Parent=scroller
+    local rows={}
+    for i=1,25 do
+        local name=string.format("Test item %02d",i)
+        rows[i]=button(scroller,name,function() report("Picked "..name) end)
+    end
+    search:GetPropertyChangedSignal("Text"):Connect(function()
+        for _,row in ipairs(rows) do row.Visible=string.find(string.lower(row.Text),string.lower(search.Text),1,true)~=nil end
+        scroller.CanvasPosition=Vector2.new()
+    end)
+    local confirm=Section.new(columns.Left,deps,{Title="Confirmation"})
+    local armed=false
+    local confirmButton
+    confirmButton=button(confirm.Body,"Test confirmation",function()
+        if armed then armed=false;confirmButton.Text="Test confirmation";report("Confirmed — no external action performed.")
+        else armed=true;confirmButton.Text="Click again to confirm";report("Awaiting confirmation") end
+    end)
+    button(confirm.Body,"Cancel",function() armed=false;confirmButton.Text="Test confirmation";report("Cancelled") end)
+end
+
 app:SelectPage("Dashboard")
 app:SetGlassQuality("Off")
-print("SERENITY M4.3 STAR THEMES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.4 PLAYGROUND | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+
 
 
 
