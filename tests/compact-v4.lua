@@ -1853,6 +1853,9 @@ function Desktop.Mount(deps, options)
         page.ScrollBarImageTransparency = 0.56
         page.ScrollingDirection = Enum.ScrollingDirection.Y
         page.Parent = content
+        runtime:TrackConnection(page:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+            if app.OnViewChanged then app.OnViewChanged() end
+        end))
 
         local padding = Instance.new("UIPadding")
         padding.PaddingRight = UDim.new(0, 5)
@@ -1887,6 +1890,7 @@ function Desktop.Mount(deps, options)
         deps.PopupManager:Close()
         local changed=currentPage~=id
         currentPage = id
+        if app.OnViewChanged then app.OnViewChanged() end
         pageText.Text = target.Title
         for pageId, entry in pairs(pages) do
             local selected = pageId == id
@@ -1901,6 +1905,30 @@ function Desktop.Mount(deps, options)
         end
     end
 
+    function app:GetViewState()
+        local positions={}
+        for id,entry in pairs(pages) do positions[id]=entry.Page.CanvasPosition.Y end
+        return {Page=currentPage,Positions=positions}
+    end
+    function app:RestoreViewState(view)
+        if type(view)~="table" then return end
+        if type(view.Page)=="string" and pages[view.Page] then self:SelectPage(view.Page) end
+        task.defer(function()
+            if runtime.Destroyed then return end
+            if type(view.Positions)~="table" then return end
+            for id,y in pairs(view.Positions) do
+                local entry=pages[id]
+                if entry and type(y)=="number" and y==y and math.abs(y)<1000000 then
+                    local maximum=math.max(0,entry.Page.AbsoluteCanvasSize.Y-entry.Page.AbsoluteWindowSize.Y)
+                    entry.Page.CanvasPosition=Vector2.new(0,math.clamp(y,0,maximum))
+                end
+            end
+        end)
+    end
+    runtime:TrackCleanup(function()
+        deps.PopupManager:Close()
+        for _,entry in pairs(pages) do if entry.Transition then entry.Transition:Cancel() end end
+    end)
     function app:SetGlassQuality(quality)
         if acrylic then acrylic:SetQuality(quality) end
     end
@@ -2105,6 +2133,10 @@ function Desktop.Mount(deps, options)
     scopeButton.MouseButton1Click:Connect(createScopePopup)
 
     runtime:TrackConnection(UserInputService.InputBegan:Connect(function(input, processed)
+        if input.KeyCode==Enum.KeyCode.Escape and deps.PopupManager.Active then
+            deps.PopupManager:Close()
+            return
+        end
         if processed then return end
         if input.KeyCode == Enum.KeyCode.K and UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
             createSearchPopup()
@@ -2363,7 +2395,7 @@ saveAppearance=function()
     task.delay(0.7,function()
         if revision~=saveRevision or type(writefile)~="function" then return end
         pcall(function()
-            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur}))
+            writefile(appearancePath,HttpService:JSONEncode({Version=1,Theme=selectedTheme,Mode=materialState.Mode,Opacity=materialState.Opacity,Edge=materialState.Edge,Palette=materialState.Palette,Blur=materialState.Blur,View=app:GetViewState()}))
         end)
     end)
 end
@@ -2699,7 +2731,9 @@ end
 
 app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
-print("SERENITY M4.14 ORBIT WORKSPACE | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+if savedAppearance then app:RestoreViewState(savedAppearance.View) end
+app.OnViewChanged=saveAppearance
+print("SERENITY M4.15 VIEW MEMORY | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
