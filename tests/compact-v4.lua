@@ -1565,6 +1565,9 @@ function Desktop.Mount(deps, options)
     uiScale.Parent = holder
 
     local function refreshScale()
+        -- Keep an open picker stable while the mobile keyboard changes the viewport.
+        local focused=UserInputService:GetFocusedTextBox()
+        if focused and focused:IsDescendantOf(screen) then return end
         local camera = workspace.CurrentCamera
         local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
         local inset = GuiService:GetGuiInset()
@@ -1902,7 +1905,7 @@ function Desktop.Mount(deps, options)
         local changed=currentPage~=id
         currentPage = id
         if app.OnViewChanged then app.OnViewChanged() end
-        pageText.Text = target.Title
+        pageText.Text = deps.Mobile and "Categories" or target.Title
         for pageId, entry in pairs(pages) do
             local selected = pageId == id
             if entry.Transition then entry.Transition:Cancel();entry.Transition=nil end
@@ -1981,13 +1984,27 @@ function Desktop.Mount(deps, options)
         local popup = Instance.new("Frame")
         popup.AnchorPoint = Vector2.new(1, 0)
         popup.Position = UDim2.new(1, -16, 0, tokens.Size.Topbar - 2)
-        popup.Size = UDim2.fromOffset(292, 300)
+        local logicalWidth=holder.Size.X.Offset
+        local popupWidth=math.min(deps.Mobile and 340 or 292,logicalWidth-24)
+        local popupHeight=math.min(340,holder.Size.Y.Offset-tokens.Size.Topbar-14)
+        popup.Size = UDim2.fromOffset(popupWidth,popupHeight)
+        if categoriesOnly then
+            popup.AnchorPoint=Vector2.new(0,0)
+            popup.Position=UDim2.fromOffset(math.clamp(pageButton.Position.X.Offset,12,logicalWidth-popupWidth-12),tokens.Size.Topbar+2)
+        end
         popup.ZIndex = 80
         popup.Parent = overlay
         deps.Material.Popup(popup, tokens)
 
+        local caption=deps.Typography.Label(popup,"Value",tokens,categoriesOnly and "Categories" or "All features",UDim2.fromOffset(12,6),UDim2.new(1,-60,0,30),tokens.Color.Text)
+        caption.ZIndex=81
+        local close=Instance.new("TextButton")
+        close.Text="×";close.TextSize=22;close.TextColor3=tokens.Color.TextMuted
+        close.BackgroundTransparency=1;close.Size=UDim2.fromOffset(40,36)
+        close.Position=UDim2.new(1,-44,0,2);close.ZIndex=82;close.Parent=popup
+        close.Activated:Connect(function() deps.PopupManager:Close() end)
         local input = Instance.new("TextBox")
-        input.Position = UDim2.fromOffset(8, 8)
+        input.Position = UDim2.fromOffset(8, 42)
         input.Size = UDim2.new(1, -16, 0, 34)
         input.Text = ""
         input.PlaceholderText = categoriesOnly and "Filter categories..." or "Search all features..."
@@ -2005,11 +2022,11 @@ function Desktop.Mount(deps, options)
         local listFrame = Instance.new("ScrollingFrame")
         listFrame.BackgroundTransparency = 1
         listFrame.BorderSizePixel = 0
-        listFrame.Position = UDim2.fromOffset(8, 50)
-        listFrame.Size = UDim2.new(1, -16, 1, -58)
+        listFrame.Position = UDim2.fromOffset(8, 84)
+        listFrame.Size = UDim2.new(1, -16, 1, -92)
         listFrame.CanvasSize = UDim2.new()
         listFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        listFrame.ScrollBarThickness = 2
+        listFrame.ScrollBarThickness = deps.Mobile and 4 or 2
         listFrame.ScrollBarImageColor3 = tokens.Color.Accent
         listFrame.ZIndex = 81
         listFrame.Parent = popup
@@ -2042,7 +2059,7 @@ function Desktop.Mount(deps, options)
             task.defer(function()
                 if runtime.Destroyed or not target.Parent then return end
                 local page=match.Entry.Page
-                local y=target.AbsolutePosition.Y-page.AbsolutePosition.Y+page.CanvasPosition.Y-18
+                local y=(target.AbsolutePosition.Y-page.AbsolutePosition.Y)/math.max(uiScale.Scale,0.01)+page.CanvasPosition.Y-18
                 page.CanvasPosition=Vector2.new(0,math.clamp(y,0,math.max(0,page.AbsoluteCanvasSize.Y-page.AbsoluteWindowSize.Y)))
                 local outline=Instance.new("UIStroke")
                 outline.Name="SearchHighlight";outline.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
@@ -2052,8 +2069,8 @@ function Desktop.Mount(deps, options)
         end
         for _,match in ipairs(matches) do
             local row=Instance.new("TextButton")
-            row.Size=UDim2.new(1,-2,0,categoriesOnly and 35 or 48)
-            row.BackgroundColor3=tokens.Color.PanelSoft;row.BackgroundTransparency=0.12
+            row.Size=UDim2.new(1,-2,0,categoriesOnly and (deps.Mobile and 44 or 35) or 48)
+            row.BackgroundColor3=(categoriesOnly and match.Entry.Id==currentPage) and tokens.Color.Accent or tokens.Color.PanelSoft;row.BackgroundTransparency=0.12
             row.BorderSizePixel=0;row.Text="";row.AutoButtonColor=false;row.ZIndex=82;row.Parent=listFrame
             corner(row,6)
             local title=deps.Typography.Label(row,"Value",tokens,match.Title,UDim2.fromOffset(10,4),UDim2.new(1,-20,0,25),tokens.Color.Text)
@@ -2065,7 +2082,7 @@ function Desktop.Mount(deps, options)
             table.insert(rows,{Frame=row,Match=match,Search=string.lower(match.Title.." "..match.Entry.Title.." "..(match.Description or ""))})
             row.Activated:Connect(function() jump(match) end)
         end
-        local empty=deps.Typography.Label(listFrame,"Value",tokens,"No matching features",UDim2.new(),UDim2.new(1,-10,0,40),tokens.Color.TextMuted)
+        local empty=deps.Typography.Label(listFrame,"Value",tokens,categoriesOnly and "No matching categories" or "No matching features",UDim2.new(),UDim2.new(1,-10,0,40),tokens.Color.TextMuted)
         empty.ZIndex=83;empty.Visible=false
         input:GetPropertyChangedSignal("Text"):Connect(function()
             local q=string.lower(input.Text or "")
@@ -2084,7 +2101,7 @@ function Desktop.Mount(deps, options)
         end)
 
         deps.PopupManager:Set(popup)
-        task.defer(function() if input.Parent and not runtime.Destroyed then input:CaptureFocus() end end)
+        -- TextBox receives focus only from an explicit click or tap.
     end
 
     local function createScopePopup()
@@ -2139,8 +2156,8 @@ function Desktop.Mount(deps, options)
         if point.X < p.X or point.Y < p.Y or point.X > p.X + size.X or point.Y > p.Y + size.Y then deps.PopupManager:Close() end
     end))
 
-    searchButton.MouseButton1Click:Connect(function() createSearchPopup(false) end)
-    pageButton.MouseButton1Click:Connect(function() createSearchPopup(true) end)
+    searchButton.Activated:Connect(function() createSearchPopup(false) end)
+    pageButton.Activated:Connect(function() createSearchPopup(true) end)
     scopeButton.MouseButton1Click:Connect(createScopePopup)
 
     runtime:TrackConnection(UserInputService.InputBegan:Connect(function(input, processed)
@@ -2767,7 +2784,7 @@ app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
 if savedAppearance then app:RestoreViewState(savedAppearance.View) end
 app.OnViewChanged=saveAppearance
-print("SERENITY M4.18 TOUCH LAYOUT | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.19 MOBILE CATEGORIES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
