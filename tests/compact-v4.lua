@@ -674,11 +674,14 @@ function PopupManager:Close()
         end)
         self.Active = nil
     end
+    if self.OnChange then self.OnChange(nil) end
 end
 
 function PopupManager:Set(frame)
     self:Close()
     self.Active = frame
+    frame.Active=true
+    if self.OnChange then self.OnChange(frame) end
     return frame
 end
 
@@ -1787,6 +1790,40 @@ function Desktop.Mount(deps, options)
     overlay.ZIndex = 70
     overlay.Parent = shell
     deps.PopupHost = overlay
+    local shield=Instance.new("TextButton")
+    shield.Name="PopupInputShield";shield.Text="";shield.AutoButtonColor=false
+    shield.BackgroundColor3=Color3.new(0,0,0);shield.BackgroundTransparency=0.75
+    shield.Size=UDim2.fromScale(1,1);shield.ZIndex=71;shield.Visible=false
+    shield.Active=true;shield.Parent=overlay
+    shield.Activated:Connect(function() deps.PopupManager:Close() end)
+    local lockedScrollers={}
+    deps.PopupManager.OnChange=function(active)
+        for frame,enabled in pairs(lockedScrollers) do
+            if frame.Parent then frame.ScrollingEnabled=enabled end
+        end
+        table.clear(lockedScrollers)
+        shield.Visible=active~=nil
+        if active then
+            for _,frame in ipairs(shell:GetDescendants()) do
+                if frame:IsA("ScrollingFrame") and not frame:IsDescendantOf(active) then
+                    lockedScrollers[frame]=frame.ScrollingEnabled
+                    frame.ScrollingEnabled=false
+                end
+            end
+        end
+    end
+    local mobileTabs
+    if deps.Mobile then
+        mobileTabs=Instance.new("ScrollingFrame")
+        mobileTabs.Name="CategoryTabs";mobileTabs.BackgroundTransparency=1
+        mobileTabs.BorderSizePixel=0;mobileTabs.Position=UDim2.fromOffset(12,tokens.Size.Topbar+4)
+        mobileTabs.Size=UDim2.new(1,-24,0,42);mobileTabs.ZIndex=5
+        mobileTabs.CanvasSize=UDim2.new();mobileTabs.AutomaticCanvasSize=Enum.AutomaticSize.X
+        mobileTabs.ScrollingDirection=Enum.ScrollingDirection.X;mobileTabs.ScrollBarThickness=2
+        mobileTabs.ScrollBarImageColor3=tokens.Color.Accent;mobileTabs.Parent=shell
+        local layout=Instance.new("UIListLayout");layout.FillDirection=Enum.FillDirection.Horizontal
+        layout.Padding=UDim.new(0,6);layout.SortOrder=Enum.SortOrder.LayoutOrder;layout.Parent=mobileTabs
+    end
     -- Edge treatment sits above the surfaces, without a shadow image.
     local rim=Instance.new("Frame")
     rim.Name="GlassRim"
@@ -1891,6 +1928,16 @@ function Desktop.Mount(deps, options)
         })
 
         local entry = {Id = id, Page = page, NavItem = navItem, Accent = accent, Title = props.Title or id}
+        if mobileTabs then
+            local tab=Instance.new("TextButton")
+            tab.Text=entry.Title;tab.Font=deps.Typography.Font.Medium;tab.TextSize=13
+            tab.TextColor3=tokens.Color.Text;tab.BackgroundColor3=tokens.Color.PanelSoft
+            tab.BorderSizePixel=0;tab.AutoButtonColor=false;tab.ZIndex=6
+            tab.Size=UDim2.fromOffset(math.max(80,#entry.Title*7+24),36)
+            tab.LayoutOrder=order;tab.Parent=mobileTabs;corner(tab,8)
+            tab.Activated:Connect(function() app:SelectPage(id) end)
+            entry.MobileTab=tab
+        end
         pages[id] = entry
         table.insert(navItems, entry)
 
@@ -1912,6 +1959,10 @@ function Desktop.Mount(deps, options)
             entry.Page.Position=UDim2.fromOffset(0,0)
             entry.Page.Visible = selected
             entry.NavItem:SetSelected(selected)
+            if entry.MobileTab then
+                entry.MobileTab.BackgroundColor3=selected and tokens.Color.Accent or tokens.Color.PanelSoft
+                entry.MobileTab.BackgroundTransparency=selected and 0.15 or 0.3
+            end
             if selected and changed and not deps.Motion.Reduced then
                 entry.Page.Position=UDim2.fromOffset(0,4)
                 entry.Transition=deps.Motion:Tween(entry.Page,"Select",{Position=UDim2.fromOffset(0,0)})
@@ -2144,18 +2195,6 @@ function Desktop.Mount(deps, options)
         deps.PopupManager:Set(popup)
     end
 
-    runtime:TrackConnection(UserInputService.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        local active = deps.PopupManager.Active
-        if not active then return end
-        local p, size = active.AbsolutePosition, active.AbsoluteSize
-        local point = UserInputService:GetMouseLocation()
-        if input.UserInputType == Enum.UserInputType.Touch then point = Vector2.new(input.Position.X, input.Position.Y) end
-        local inset = GuiService:GetGuiInset()
-        point = point - inset
-        if point.X < p.X or point.Y < p.Y or point.X > p.X + size.X or point.Y > p.Y + size.Y then deps.PopupManager:Close() end
-    end))
-
     searchButton.Activated:Connect(function() createSearchPopup(false) end)
     pageButton.Activated:Connect(function() createSearchPopup(true) end)
     scopeButton.MouseButton1Click:Connect(createScopePopup)
@@ -2185,8 +2224,8 @@ function Desktop.Mount(deps, options)
 
     if deps.Mobile then
         sidebar.Visible=false
-        content.Position=UDim2.fromOffset(12,tokens.Size.Topbar+8)
-        content.Size=UDim2.new(1,-24,1,-(tokens.Size.Topbar+18))
+        content.Position=UDim2.fromOffset(12,tokens.Size.Topbar+52)
+        content.Size=UDim2.new(1,-24,1,-(tokens.Size.Topbar+62))
         heading.Text="SERENITY";heading.TextSize=16
         heading.Position=UDim2.fromOffset(47,0);heading.Size=UDim2.fromOffset(115,48)
         star.Position=UDim2.fromOffset(13,10);star.Size=UDim2.fromOffset(30,30)
@@ -2784,7 +2823,7 @@ app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
 if savedAppearance then app:RestoreViewState(savedAppearance.View) end
 app.OnViewChanged=saveAppearance
-print("SERENITY M4.19 MOBILE CATEGORIES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.20 MOBILE NAVIGATION | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
