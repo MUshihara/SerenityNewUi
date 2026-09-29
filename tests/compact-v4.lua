@@ -1574,18 +1574,28 @@ function Desktop.Mount(deps, options)
         local camera = workspace.CurrentCamera
         local viewport = camera and camera.ViewportSize or Vector2.new(1280, 720)
         local inset = GuiService:GetGuiInset()
-        local touchLayout=UserInputService.TouchEnabled and (not UserInputService.KeyboardEnabled or viewport.Y<600)
-        if touchLayout then
-            -- Keep a complete logical canvas, then fit all of it into the phone.
-            -- Shrinking only the frame left desktop-size controls in a short viewport.
-            local availableW=math.max(1,viewport.X-32)
-            local availableH=math.max(1,viewport.Y-inset.Y-32)
-            local scale=math.min(1,availableW*0.9/tokens.Size.Window.X,availableH*0.86/tokens.Size.Window.Y)
-            holder.Size=UDim2.fromOffset(tokens.Size.Window.X,tokens.Size.Window.Y)
+        -- Resize the usable canvas, rather than shrinking a fixed desktop image.
+        -- Keep the input/layout mode consistent with the mounted controls.
+        local availableW=math.max(1,viewport.X-32)
+        local availableH=math.max(1,viewport.Y-inset.Y-32)
+        if deps.Mobile then
+            local portrait=availableH>availableW
+            local tablet=math.min(viewport.X,viewport.Y)>=700
+            local targetW=availableW*(tablet and 0.88 or 0.94)
+            local targetH=availableH*(tablet and 0.88 or 0.92)
+            local preferredScale=tablet and 1.25 or 1.1
+            -- A readable minimum logical width leaves room for the LEFT categories.
+            local scale=math.min(preferredScale,targetW/460,targetH/340)
+            scale=math.max(0.1,scale)
+            local logicalW=math.min(tablet and 1000 or 920,targetW/scale)
+            local logicalH=math.min(portrait and 900 or 680,targetH/scale)
+            holder.Size=UDim2.fromOffset(math.floor(logicalW),math.floor(logicalH))
             uiScale.Scale=scale
         else
-            uiScale.Scale = 1
-            holder.Size = UDim2.fromOffset(math.min(tokens.Size.Window.X, math.max(320, viewport.X - 24)), math.min(tokens.Size.Window.Y, math.max(240, viewport.Y - inset.Y - 24)))
+            uiScale.Scale = math.min(1,availableW/460,availableH/340)
+            holder.Size = UDim2.fromOffset(
+                math.min(tokens.Size.Window.X,availableW/uiScale.Scale),
+                math.min(tokens.Size.Window.Y,availableH/uiScale.Scale))
         end
         holder.Position = UDim2.fromScale(0.5, 0.5)
         deps.PopupManager:Close()
@@ -1601,6 +1611,10 @@ function Desktop.Mount(deps, options)
     runtime:TrackConnection(workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
     runtime:TrackCleanup(function() if cameraConnection then cameraConnection:Disconnect() end deps.PopupManager:Close() end)
     bindCamera()
+    -- Refit after keyboard dismissal; focused input keeps the popup stable.
+    runtime:TrackConnection(UserInputService.TextBoxFocusReleased:Connect(function()
+        task.defer(function() if not runtime.Destroyed then refreshScale() end end)
+    end))
 
     deps.Material.Shadow(holder, UDim2.fromScale(1, 1), tokens.Size.RadiusShell, tokens)
 
@@ -2798,7 +2812,7 @@ app:SelectPage("Dashboard")
 restoreAppearance(savedAppearance)
 if savedAppearance then app:RestoreViewState(savedAppearance.View) end
 app.OnViewChanged=saveAppearance
-print("SERENITY M4.21 LEFT CATEGORIES | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
+print("SERENITY M4.22 ADAPTIVE DEVICE SIZING | VISUAL TEST ONLY | RightCtrl: toggle | Ctrl+K: search")
 
 
 
