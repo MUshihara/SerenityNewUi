@@ -2444,12 +2444,12 @@ return MultiSelect
 
 
 end)()
-local Library={Version="M4.23-Media-Test2",APIVersion=3,Build=function(manifest,options)
+local Library={Version="M4.23-Dashboard-Test3",APIVersion=3,Build=function(manifest,options)
 assert(type(manifest)=="table","Expected UI demo manifest")
 for _,page in ipairs(manifest.Pages or {}) do
     for _,feature in ipairs(page.Features or {}) do
         for _,control in ipairs(feature.Controls or {}) do
-            assert(control.Type=="Switch" or control.Type=="Slider" or control.Type=="Paragraph" or control.Type=="Select" or control.Type=="MultiSelect" or control.Type=="Input" or control.Type=="Action" or control.Type=="Image" or control.Type=="Banner","Unsupported demo control: "..tostring(control.Type))
+            assert(control.Type=="Switch" or control.Type=="Slider" or control.Type=="Paragraph" or control.Type=="Select" or control.Type=="MultiSelect" or control.Type=="Input" or control.Type=="Action" or control.Type=="Image" or control.Type=="Banner" or control.Type=="StatCards" or control.Type=="ButtonGroup","Unsupported demo control: "..tostring(control.Type))
         end
     end
 end
@@ -2524,7 +2524,7 @@ app.Screen=app.ScreenGui
 app.Window=app
 app.Controls={}
 app.Manifest=manifest
-app.Version="M4.23-Media-Test2"
+app.Version="M4.23-Dashboard-Test3"
 app.APIVersion=3
 function app:Destroy() runtime:Destroy() end
 runtime.OnDestroy=runtime.TrackCleanup
@@ -2706,13 +2706,71 @@ local function makeMedia(parent,props,isBanner)
     return c
 end
 
+
+local function makeStatCards(parent,props)
+    local row=Instance.new("Frame");row.BackgroundTransparency=1;row.Size=UDim2.new(1,0,0,150);row.Parent=parent
+    row:SetAttribute("FeatureTitle",props.Title or "Status")
+    local cards={}
+    for i,item in ipairs(props.Items or {}) do
+        local card=Instance.new("Frame");card.Parent=row;Material.Control(card,Tokens)
+        local label=Typography.Label(card,"Control",Tokens,item.Title or "",UDim2.fromOffset(12,10),UDim2.new(1,-24,0,20),Tokens.Color.TextMuted)
+        label.TextSize=11
+        local value=Typography.Label(card,"Control",Tokens,tostring(item.Value or ""),UDim2.fromOffset(12,34),UDim2.new(1,-24,0,28),Tokens.Color.Text)
+        value.TextSize=19;value.Font=Enum.Font.GothamBold;value.TextTruncate=Enum.TextTruncate.AtEnd
+        cards[i]={Frame=card,Label=label,Value=value}
+    end
+    local function layout()
+        local width=row.AbsoluteSize.X;if width<=0 then return end
+        local count=width>=520 and 4 or (width>=240 and 2 or 1)
+        local gap=10;local w=(width-(count-1)*gap)/count
+        for i,c in ipairs(cards) do
+            c.Frame.Position=UDim2.fromOffset(((i-1)%count)*(w+gap),math.floor((i-1)/count)*86)
+            c.Frame.Size=UDim2.fromOffset(w,76)
+        end
+        row.Size=UDim2.new(1,0,0,math.ceil(#cards/count)*86-10)
+    end
+    runtime:TrackConnection(row:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout));layout()
+    return {Frame=row,Set=function(_,items)
+        for i,item in ipairs(items or {}) do
+            if cards[i] then
+                if item.Title then cards[i].Label.Text=tostring(item.Title) end
+                if item.Value~=nil then cards[i].Value.Text=tostring(item.Value) end
+            end
+        end
+    end}
+end
+local function makeButtonGroup(parent,props)
+    local row=Instance.new("Frame");row.BackgroundTransparency=1;row.Size=UDim2.new(1,0,0,44);row.Parent=parent
+    row:SetAttribute("FeatureTitle",props.Title or "Quick actions")
+    local buttons={}
+    for i,item in ipairs(props.Buttons or {}) do
+        local b=Instance.new("TextButton");b.Text=item.Title or "Action";b.Font=Enum.Font.GothamMedium
+        b.TextSize=12;b.TextColor3=Tokens.Color.Text;b.Parent=row;Material.Inset(b,Tokens);buttons[i]=b
+        runtime:TrackConnection(b.Activated:Connect(function()
+            if runtime.Destroyed then return end
+            local ok,err=pcall(function() if item.Callback then item.Callback(app,app.Adapter) end end)
+            if not ok then app:Notify(tostring(err)) end
+        end))
+    end
+    local function layout()
+        local width=row.AbsoluteSize.X;if width<=0 then return end
+        local count=math.max(1,math.min(#buttons,math.floor((width+8)/120)))
+        local w=(width-(count-1)*8)/count
+        for i,b in ipairs(buttons) do b.Size=UDim2.fromOffset(w,40);b.Position=UDim2.fromOffset(((i-1)%count)*(w+8),math.floor((i-1)/count)*48) end
+        row.Size=UDim2.new(1,0,0,math.ceil(#buttons/count)*48-8)
+    end
+    runtime:TrackConnection(row:GetPropertyChangedSignal("AbsoluteSize"):Connect(layout));layout()
+    return {Frame=row}
+end
+
 local icons={Dashboard="dashboard",Automation="automation",PetsTrails="shop",Rewards="progression",Performance="misc",Settings="settings"}
 for order,page in ipairs(manifest.Pages) do
     local viewId=page.Id=="Settings" and "GameTuning" or page.Id
     local view=app:AddPage({Id=viewId,Title=page.Id=="Settings" and "Game Tuning" or page.Title,Icon=icons[page.Id] or "info",Group="Components",Order=order})
     local columns=ColumnLayout.new(view,deps,{Gap=12,RowGap=12})
     for index,feature in ipairs(page.Features or {}) do
-        local section=Section.new(index%2==1 and columns.Left or columns.Right,deps,{Title=feature.Title,Open=feature.Expanded~=false})
+        local section=Section.new(feature.FullWidth and view or (index%2==1 and columns.Left or columns.Right),deps,{Title=feature.Title,Open=feature.Expanded~=false})
+        if feature.FullWidth then section.Frame.LayoutOrder=index-100 else section.Frame.LayoutOrder=index end
         local spacing=section.Body:FindFirstChildOfClass("UIListLayout")
         if spacing then spacing.Padding=UDim.new(0,10) end
         for n,control in ipairs(feature.Controls or {}) do
@@ -2740,6 +2798,10 @@ for order,page in ipairs(manifest.Pages) do
                 function widget:Get() return self.Value end
             elseif control.Type=="MultiSelect" then
                 widget=modules["src/components/MultiSelect.lua"].new(section.Body,deps,props)
+            elseif control.Type=="StatCards" then
+                widget=makeStatCards(section.Body,control)
+            elseif control.Type=="ButtonGroup" then
+                widget=makeButtonGroup(section.Body,control)
             elseif control.Type=="Image" or control.Type=="Banner" then
                 widget=makeMedia(section.Body,control,control.Type=="Banner")
             elseif control.Type=="Input" then
@@ -2932,16 +2994,38 @@ return app
 end}
 
 local thumbnail="rbxthumb://type=AvatarHeadShot&id="..tostring(game:GetService("Players").LocalPlayer.UserId).."&w=420&h=420"
-local function media(app,id,value) app:SetLive("Dashboard.Preview."..id,value) end
+local function media(app,id,value) app:SetLive("MediaLab.Preview."..id,value) end
+local started=os.clock()
 local app=Library.Build({
  SerenityAPIVersion=3,GameName="Serenity Component Demo",
  Pages={{Id="Dashboard",Title="Dashboard",Features={
+ {Id="Welcome",Title="WELCOME",FullWidth=true,Controls={
+ {Id="Banner",Type="Banner",Title="Welcome, "..game:GetService("Players").LocalPlayer.DisplayName,Description="Your Serenity workspace. Open Media Lab to try images, or Settings to personalize the glass.",Image=thumbnail,AspectRatio=3.8,ScaleType="Crop"}
+ }},
+ {Id="Status",Title="AT A GLANCE",FullWidth=true,Controls={
+ {Id="Cards",Type="StatCards",Title="Session overview",Items={
+ {Title="UI STATUS",Value="Ready"},{Title="PLAYERS",Value=tostring(#game:GetService("Players"):GetPlayers())},
+ {Title="SESSION",Value="0m"},{Title="BUILD",Value="Preview"}
+ }}
+ }},
+ {Id="Actions",Title="QUICK ACTIONS",FullWidth=true,Controls={
+ {Id="Buttons",Type="ButtonGroup",Buttons={
+ {Title="Media Lab",Callback=function(a) a:SelectPage("MediaLab") end},
+ {Title="Appearance",Callback=function(a) a:SelectPage("Settings") end},
+ {Title="Refresh stats",Callback=function(a) a:SetLive("Dashboard.Status.Cards",{{Value="Ready"},{Value=tostring(#game:GetService("Players"):GetPlayers())},{Value=tostring(math.floor((os.clock()-started)/60)).."m"},{Value="Preview"}}) end},
+ {Title="About",Callback=function(a) a:SelectPage("About") end}
+ }}
+ }},
+ {Id="Info",Title="ABOUT THIS PREVIEW",FullWidth=true,Controls={
+ {Id="Note",Type="Paragraph",Title="Serenity · M4.23",Text="Full-width welcome banner, responsive stat cards, and compact button groups. Values refresh manually; this is a UI-only test."}
+ }}
+}},{Id="MediaLab",Title="Media Lab",Features={
  {Id="Preview",Title="Media preview",Controls={
  {Id="Welcome",Type="Banner",Title="Welcome to Serenity",Description="Image + title + description + touch button. Resize or rotate your device to check the layout.",Image=thumbnail,AspectRatio=2.5,ScaleType="Crop",ButtonText="Test banner button",Changed=function(a) a:Notify("Banner button","Working") end},
  {Id="Artwork",Type="Image",Title="Image preview",Image=thumbnail,AspectRatio=1.6,ScaleType="Fit"}
  }},
  {Id="Tools",Title="Try the components",Controls={
- {Id="Visible",Type="Switch",Title="Show banner",Default=true,Changed=function(v,a) a.Controls["Dashboard.Preview.Welcome"]:SetVisible(v) end},
+ {Id="Visible",Type="Switch",Title="Show banner",Default=true,Changed=function(v,a) a.Controls["MediaLab.Preview.Welcome"]:SetVisible(v) end},
  {Id="Ratio",Type="Slider",Title="Image aspect ratio",Min=0.8,Max=4,Step=0.1,Default=1.6,Changed=function(v,a) media(a,"Artwork",{AspectRatio=v}) end},
  {Id="Fit",Type="Select",Title="Image mode",Options={"Fit","Crop"},Default="Fit",Changed=function(v,a) media(a,"Artwork",{ScaleType=v}) end},
  {Id="Source",Type="Input",Title="Roblox asset ID or image URI",Placeholder="Asset ID, Roblox URL, or rbxassetid://",Changed=function(v,a) media(a,"Artwork",{Image=v});media(a,"Welcome",{Image=v}) end},
