@@ -2444,7 +2444,7 @@ return MultiSelect
 
 
 end)()
-local Library={Version="M4.23-Media-Test1",APIVersion=3,Build=function(manifest,options)
+local Library={Version="M4.23-Media-Test2",APIVersion=3,Build=function(manifest,options)
 assert(type(manifest)=="table","Expected UI demo manifest")
 for _,page in ipairs(manifest.Pages or {}) do
     for _,feature in ipairs(page.Features or {}) do
@@ -2524,7 +2524,7 @@ app.Screen=app.ScreenGui
 app.Window=app
 app.Controls={}
 app.Manifest=manifest
-app.Version="M4.23-Media-Test1"
+app.Version="M4.23-Media-Test2"
 app.APIVersion=3
 function app:Destroy() runtime:Destroy() end
 runtime.OnDestroy=runtime.TrackCleanup
@@ -2627,10 +2627,10 @@ local function makeMedia(parent,props,isBanner)
     picture.ScaleType=Enum.ScaleType.Fit
     local fallback=Instance.new("TextLabel")
     fallback.BackgroundTransparency=1;fallback.Size=UDim2.fromScale(1,1)
-    fallback.Text="Image unavailable / loading";fallback.TextWrapped=true
+    fallback.Text=isBanner and "" or "No image loaded\nTry Restore avatar image";fallback.TextWrapped=true
     fallback.Font=Enum.Font.Gotham;fallback.TextSize=12;fallback.TextColor3=Tokens.Color.Text;fallback.Parent=row
     local overlay=Instance.new("Frame");overlay.Size=UDim2.fromScale(1,1)
-    overlay.BackgroundColor3=Color3.fromRGB(7,19,32);overlay.BackgroundTransparency=0.25
+    overlay.BackgroundColor3=Color3.fromRGB(7,19,32);overlay.BackgroundTransparency=0.45
     overlay.BorderSizePixel=0;overlay.Visible=isBanner;overlay.Parent=row
     local title=Instance.new("TextLabel");title.BackgroundTransparency=1
     title.Position=UDim2.fromOffset(14,12);title.Size=UDim2.new(1,-28,0,0)
@@ -2641,6 +2641,7 @@ local function makeMedia(parent,props,isBanner)
     button.Position=UDim2.new(0,14,1,-46);button.Text=props.ButtonText or "Preview"
     button.Font=Enum.Font.GothamMedium;button.TextSize=12;button.TextColor3=Tokens.Color.Text
     button.Visible=isBanner and props.ButtonText~=nil;button.Parent=overlay;Material.Inset(button,Tokens)
+    local requestId=0
     local c={Frame=row,Image=picture,Ratio=props.AspectRatio or (isBanner and 2.5 or 1.6)}
     local function layout()
         local w=row.AbsoluteSize.X
@@ -2654,8 +2655,29 @@ local function makeMedia(parent,props,isBanner)
         value=type(value)=="table" and value or {}
         if value.Image~=nil then
             local source=tostring(value.Image)
-            if source:match("^%d+$") then source="rbxassetid://"..source end
+            source=source:match("^%s*(.-)%s*$")
+            local assetId=source:match("^%d+$")
+            if source:match("^https?://") then assetId=source:match("[?&]id=(%d+)") or source:match("/catalog/(%d+)") or source:match("/library/(%d+)") end
+            if assetId then source="rbxthumb://type=Asset&id="..assetId.."&w=420&h=420" end
+            requestId=requestId+1
+            local current=requestId
             picture.Image=source
+            if not isBanner then fallback.Text=source=="" and "No image selected" or "Loading image..." end
+            if source~="" then
+                task.defer(function()
+                    local success=true
+                    local ok=pcall(function()
+                        game:GetService("ContentProvider"):PreloadAsync({picture},function(_,status)
+                            if status~=Enum.AssetFetchStatus.Success then success=false end
+                        end)
+                    end)
+                    if runtime.Destroyed or current~=requestId then return end
+                    fallback.Visible=not picture.IsLoaded
+                    if not isBanner then
+                        fallback.Text=(ok and success and picture.IsLoaded) and "" or "Image could not load\nTry Restore avatar image or another public asset"
+                    end
+                end)
+            end
         end
         if value.Title~=nil then title.Text=tostring(value.Title) end
         if value.Description~=nil then description.Text=tostring(value.Description) end
@@ -2691,6 +2713,8 @@ for order,page in ipairs(manifest.Pages) do
     local columns=ColumnLayout.new(view,deps,{Gap=12,RowGap=12})
     for index,feature in ipairs(page.Features or {}) do
         local section=Section.new(index%2==1 and columns.Left or columns.Right,deps,{Title=feature.Title,Open=feature.Expanded~=false})
+        local spacing=section.Body:FindFirstChildOfClass("UIListLayout")
+        if spacing then spacing.Padding=UDim.new(0,10) end
         for n,control in ipairs(feature.Controls or {}) do
             local id=page.Id.."."..feature.Id.."."..(control.Id or ("Info"..n))
             local props={}
@@ -2920,7 +2944,7 @@ local app=Library.Build({
  {Id="Visible",Type="Switch",Title="Show banner",Default=true,Changed=function(v,a) a.Controls["Dashboard.Preview.Welcome"]:SetVisible(v) end},
  {Id="Ratio",Type="Slider",Title="Image aspect ratio",Min=0.8,Max=4,Step=0.1,Default=1.6,Changed=function(v,a) media(a,"Artwork",{AspectRatio=v}) end},
  {Id="Fit",Type="Select",Title="Image mode",Options={"Fit","Crop"},Default="Fit",Changed=function(v,a) media(a,"Artwork",{ScaleType=v}) end},
- {Id="Source",Type="Input",Title="Roblox image asset ID",Placeholder="Paste an image ID",Changed=function(v,a) media(a,"Artwork",{Image=v});media(a,"Welcome",{Image=v}) end},
+ {Id="Source",Type="Input",Title="Roblox asset ID or image URI",Placeholder="Asset ID, Roblox URL, or rbxassetid://",Changed=function(v,a) media(a,"Artwork",{Image=v});media(a,"Welcome",{Image=v}) end},
  {Id="Missing",Type="Action",Title="Test missing-image fallback",Callback=function(a) media(a,"Artwork",{Image=""});media(a,"Welcome",{Image=""}) end},
  {Id="Restore",Type="Action",Title="Restore avatar image",Callback=function(a) media(a,"Artwork",{Image=thumbnail});media(a,"Welcome",{Image=thumbnail}) end},
  {Id="Text",Type="Action",Title="Test long banner text",Callback=function(a) media(a,"Welcome",{Title="Serenity adapts to your device",Description="This longer description checks wrapping on a phone, tablet, and PC. The card should grow so the text and button remain readable."}) end},
